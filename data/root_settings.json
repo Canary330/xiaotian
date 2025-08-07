@@ -1,0 +1,15 @@
+{
+  "auto_trigger_groups": [],
+  "daily_trigger_limit": 2,
+  "today_trigger_count": {},
+  "last_trigger_date": "",
+  "target_groups": [],
+  "weather_city": "双流",
+  "enabled_features": {
+    "daily_weather": true,
+    "daily_stats": true,
+    "daily_astronomy": true,
+    "monthly_astronomy": true,
+    "auto_trigger": true
+  }
+}
