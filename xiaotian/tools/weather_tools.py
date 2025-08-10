@@ -4,17 +4,60 @@
 """
 
 import json
-import os
 import re
 from datetime import datetime
 import random
 from typing import Dict, Any
-from .config import POSTER_OUTPUT_DIR, CHART_OUTPUT_DIR
+from ..manage.root_manager import RootManager
+from .message import MessageSender
 
 
-class XiaotianTools:
+class WeatherTools:
     def __init__(self):
-        pass
+        self.root_manager = RootManager()
+        self.message_sender = MessageSender(self.root_manager, None)  # AI核心暂时不需要传入
+    
+    def daily_weather_task(self):
+        """每日天气任务"""
+        if not self.root_manager.is_feature_enabled('daily_weather'):
+            return
+            
+        print(f"🌤️ {datetime.now().strftime('%H:%M')} - 执行每日天气任务")
+        
+        # 获取天气信息
+        city = self.root_manager.get_weather_city()
+        weather_info = self.get_weather_info(city)
+
+        if "error" not in weather_info:
+            # 生成天气报告
+            weather_report = self._format_weather_report(weather_info)
+            print(f"📢 天气播报：\n{weather_report}")
+            
+            # 发送到目标群组
+            target_groups = self.root_manager.get_target_groups()
+            if target_groups:
+                self.message_sender.send_message_to_groups(weather_report)
+            else:
+                print("⚠️ 没有设置目标群组，天气报告未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
+        else:
+            print(f"❌ 天气获取失败：{weather_info['error']}")
+
+    def _format_weather_report(self, weather_info: dict) -> str:
+        """格式化天气报告"""
+        # 检查是否有错误信息
+        if 'error' in weather_info:
+            return f"🌤️ 天气预报服务暂时不可用\n\n{weather_info.get('error', '无法获取天气数据')}\n\n稍后再试喵~"
+            
+        return f"""🌤️ 今晚观星天气预报
+
+📍 地点：{weather_info['location']}
+🌡️ 温度：{weather_info['temperature']}°C
+☁️ 天气：{weather_info['weather']}
+💧 湿度：{weather_info['humidity']}%
+💨 风速：{weather_info['wind_speed']}km/h
+👁️ 能见度：{weather_info['visibility']}
+
+{weather_info['stargazing_advice']}"""
     
 
     def get_weather_info(self, location: str = None) -> Dict[str, Any]:
@@ -34,7 +77,7 @@ class XiaotianTools:
             print(f"天气查询参数: 日期={current_date}, 时段={time_of_day}")
             
             # 导入AI核心，利用已有的Moonshot API连接
-            from .ai_core import XiaotianAI
+            from ..ai.ai_core import XiaotianAI
             ai = XiaotianAI()
             
             # 构造天气查询系统提示词和用户提示词
@@ -191,12 +234,6 @@ class XiaotianTools:
             "stargazing_advice": self._get_stargazing_advice(weather, visibility, wind_speed)
         }
         
-    def _simulate_weather_search(self, location: str):
-        """已废弃的模拟天气方法"""
-        print("警告: 使用了已废弃的_simulate_weather_search方法")
-        # 返回错误信息，不模拟天气数据
-        return "未知", 0, 0, 0, "未知"
-    
     def _get_stargazing_advice(self, weather: str, visibility: str, wind_speed: int) -> str:
         """生成观星建议"""
         current_hour = datetime.now().hour
@@ -263,82 +300,3 @@ class XiaotianTools:
                     "🔄 建议暂缓观测计划，关注未来几天天气预报选择更佳观测时机。"
                 ]
             return random.choice(advice_options)
-    
-    def create_stats_chart(self, data: Dict[str, Any], chart_type: str = "bar") -> str:
-        """创建统计图表（文本版本）"""
-        try:
-            os.makedirs(CHART_OUTPUT_DIR, exist_ok=True)
-            
-            # 创建文本图表
-            chart_content = self._create_text_chart(data, chart_type)
-            
-            # 保存图表
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"stats_chart_{chart_type}_{timestamp}.txt"
-            filepath = os.path.join(CHART_OUTPUT_DIR, filename)
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(chart_content)
-            
-            print(f"\n{chart_content}")
-            return f"统计图表已生成：{filepath}"
-            
-        except Exception as e:
-            return f"图表生成失败：{str(e)}"
-    
-    def _create_text_chart(self, data: Dict[str, Any], chart_type: str) -> str:
-        """创建文本图表"""
-        if not data:
-            return "📊 暂无数据"
-        
-        chart = []
-        chart.append("📊 小天消息统计图表")
-        chart.append("=" * 50)
-        chart.append("")
-        
-        if chart_type == "bar":
-            # 柱状图
-            max_value = max(data.values()) if data.values() else 1
-            max_label_len = max(len(str(k)) for k in data.keys())
-            
-            for label, value in data.items():
-                bar_length = int((value / max_value) * 30)
-                bar = "█" * bar_length
-                padding = " " * (max_label_len - len(str(label)))
-                chart.append(f"{label}{padding} │{bar} {value}")
-            
-        elif chart_type == "pie":
-            # 饼图（用百分比表示）
-            total = sum(data.values())
-            for label, value in data.items():
-                percentage = (value / total) * 100 if total > 0 else 0
-                chart.append(f"{label}: {value} ({percentage:.1f}%)")
-                
-        elif chart_type == "line":
-            # 折线图
-            values = list(data.values())
-            labels = list(data.keys())
-            
-            if len(values) > 1:
-                max_value = max(values)
-                min_value = min(values)
-                
-                # 简化的趋势显示
-                for i, (label, value) in enumerate(data.items()):
-                    if i > 0:
-                        prev_value = values[i-1]
-                        if value > prev_value:
-                            trend = "📈"
-                        elif value < prev_value:
-                            trend = "📉"
-                        else:
-                            trend = "➡️"
-                    else:
-                        trend = "🔹"
-                    chart.append(f"{label}: {value} {trend}")
-        
-        chart.append("")
-        chart.append("=" * 50)
-        chart.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        return "\n".join(chart)

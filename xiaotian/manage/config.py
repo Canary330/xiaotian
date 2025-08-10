@@ -15,30 +15,26 @@ BLACKLIST_USER_IDS = [user_id.strip() for user_id in os.getenv("QQ_BLACKLIST", "
 # 小天基础配置
 XIAOTIAN_NAME = "小天"
 TRIGGER_WORDS = ["小天"]  # 唤醒词
-MAX_MEMORY_COUNT = 20  # 最大记忆消息数
+DAILY_ASTRONOMY_MESSAGE = "今天的每日天文来啦"
+MAX_MEMORY_COUNT = 50  # 最大记忆消息数
 
 # API限速配置
 GLOBAL_RATE_LIMIT = 80  # 每分钟全局调用次数
 USER_RATE_LIMIT = 30     # 每分钟每个用户调用次数
-COOLDOWN_SECONDS = 3    # 用户冷却时间（秒）
+COOLDOWN_SECONDS = 0.5    # 用户冷却时间（秒）
 
 # 定时任务配置
 DAILY_WEATHER_TIME = "18:00"  # 每晚6点获取天气
-DAILY_STATS_TIME = "22:00"    # 每晚10点发送统计
 DAILY_ASTRONOMY_TIME = "20:00"  # 每天晚8点发送天文海报
 MONTHLY_ASTRONOMY_TIME = "09:00"  # 每月1号发送上月合集
 CLEANUP_TIME = "03:00"  # 每天凌晨3点清理过期数据
 
 # 文件路径
 MEMORY_FILE = "xiaotian/data/memory.json"
-STATS_FILE = "xiaotian/data/stats.json"
 POSTER_OUTPUT_DIR = "xiaotian/output/posters/"
-CHART_OUTPUT_DIR = "xiaotian/output/charts/"
-WORDSTATS_DATA_DIR = "xiaotian/data/wordstats/"
-WORDSTATS_OUTPUT_DIR = "xiaotian/output/charts/"
 ASTRONOMY_IMAGES_DIR = "xiaotian/data/astronomy_images/"
 ASTRONOMY_FONTS_DIR = "xiaotian/data/fonts/"
-LOG_DIR = "logs/"
+EMOJI_DIR = "xiaotian/data/emojis/"
 
 # 字体配置
 DEFAULT_FONT = "xiaotian/data/fonts/default.ttf"  # 默认字体，用于不指定特殊字体的场合

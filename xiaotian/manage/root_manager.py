@@ -19,9 +19,9 @@ class RootManager:
         self.settings_file = ROOT_ADMIN_DATA_FILE
         self.load_settings()
         
-        # 等待图片或字体的用户命令
-        self.pending_operations = {}  # user_id: {"type": "image/font", "name": "filename"}
-        
+        # 等待图片的用户命令
+        self.pending_operations = {}  # user_id: {"type": "image", "name": "filename"}
+
         # 确保必要的目录存在
         os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
         os.makedirs(ASTRONOMY_IMAGES_DIR, exist_ok=True)
@@ -38,16 +38,15 @@ class RootManager:
             
             # 默认设置
             self.settings = {
-                'auto_trigger_groups': data.get('auto_trigger_groups', []),  # 自动气氛调节的群组
+                'auto_trigger_groups': data.get('auto_trigger_groups', [815140803]),  # 自动气氛调节的群组
                 'daily_trigger_limit': data.get('daily_trigger_limit', 2),  # 每日触发限制
                 'today_trigger_count': data.get('today_trigger_count', {}),  # 今日已触发次数
                 'last_trigger_date': data.get('last_trigger_date', ''),  # 上次触发日期
                 'qq_send_callback': None,  # QQ发送回调函数（运行时设置）
-                'target_groups': data.get('target_groups', []),  # 目标群组
+                'target_groups': data.get('target_groups', [815140803]),  # 目标群组
                 'weather_city': data.get('weather_city', '双流'),  # 天气城市
                 'enabled_features': data.get('enabled_features', {
                     'daily_weather': True,
-                    'daily_stats': True,
                     'daily_astronomy': True,
                     'monthly_astronomy': True,
                     'auto_trigger': True
@@ -65,7 +64,6 @@ class RootManager:
                 'weather_city': '双流',
                 'enabled_features': {
                     'daily_weather': True,
-                    'daily_stats': True,
                     'daily_astronomy': True,
                     'monthly_astronomy': True,
                     'auto_trigger': True
@@ -106,10 +104,6 @@ class RootManager:
                 result = self._save_image(op["name"], image_data)
                 del self.pending_operations[user_id]
                 return result
-            elif op["type"] == "font":
-                result = self._validate_and_save_font(op["name"], image_data)
-                del self.pending_operations[user_id]
-                return result
         
         # 保存图片命令 - 第一步
         if message.startswith("小天，保存图片："):
@@ -118,12 +112,6 @@ class RootManager:
             self.pending_operations[user_id] = {"type": "image", "name": filename}
             return ("📸 请发送要保存的图片", None)
         
-        # 保存字体命令 - 第一步
-        if message.startswith("小天，保存字体："):
-            filename = message.replace("小天，保存字体：", "").strip()
-            # 记录等待上传字体
-            self.pending_operations[user_id] = {"type": "font", "name": filename}
-            return ("🔤 请发送要保存的字体文件", None)
         
         # 设置目标群组
         if message.startswith("小天，设置目标群组："):
@@ -179,16 +167,6 @@ class RootManager:
             feature = message.replace("小天，禁用功能：", "").strip()
             return self._toggle_feature(feature, False)
         
-        # 替换字体命令
-        if message.startswith("小天，替换字体 "):
-            font_name = message.replace("小天，替换字体 ", "").strip()
-            required_fonts = ["title.ttf", "artistic.ttf", "text.TTF", "simhei.ttf"]
-            if font_name in required_fonts:
-                self.pending_operations[user_id] = {"type": "font", "name": font_name}
-                return (f"🔤 请发送要替换 {font_name} 的字体文件", None)
-            else:
-                return (f"❌ 无效的字体名称，可替换的字体有：{', '.join(required_fonts)}", None)
-                
         # 列出可用图片和字体
         if message == "小天，列出图片":
             return self._list_images()
@@ -199,10 +177,6 @@ class RootManager:
         # 发送天气报告
         if message == "小天，发送天气":
             return ("SEND_WEATHER", None)
-        
-        # 发送统计报告
-        if message == "小天，发送统计":
-            return ("SEND_STATS", None)
         
         # 发送天文海报
         if message == "小天，发送海报":
@@ -231,51 +205,6 @@ class RootManager:
             return (f"✅ 图片已保存：{filename}", None)
         except Exception as e:
             return (f"❌ 保存图片失败：{str(e)}", None)
-    
-    def _validate_and_save_font(self, filename: str, font_data: bytes) -> Tuple[str, None]:
-        """验证并保存字体文件"""
-        try:
-            required_fonts = ["title.ttf", "artistic.ttf", "text.TTF", "simhei.ttf"]
-            
-            # 检查是否是允许的字体类型
-            if filename.lower() in required_fonts:
-                # 直接保存到指定文件名
-                return self._save_font(filename, font_data)
-            else:
-                # 检查哪个必要字体不存在
-                missing_fonts = []
-                for font in required_fonts:
-                    if not os.path.exists(os.path.join(ASTRONOMY_FONTS_DIR, font)):
-                        missing_fonts.append(font)
-                
-                if missing_fonts:
-                    # 自动使用缺少的第一个字体名
-                    auto_filename = missing_fonts[0]
-                    return self._save_font(auto_filename, font_data, 
-                                         message=f"✅ 字体已自动保存为必要字体：{auto_filename}")
-                else:
-                    # 所有字体都存在，询问是否要替换
-                    options = "\n".join([f"- 小天，替换字体 {font}" for font in required_fonts])
-                    return (f"⚠️ 所有必要字体已存在，若要替换请使用以下命令：\n{options}", None)
-        except Exception as e:
-            return (f"❌ 验证字体失败：{str(e)}", None)
-
-    def _save_font(self, filename: str, font_data: bytes, message=None) -> Tuple[str, None]:
-        """保存字体文件"""
-        try:
-            if not filename.lower().endswith(('.ttf', '.otf', '.woff', '.woff2')):
-                filename += '.ttf'
-            
-            file_path = os.path.join(ASTRONOMY_FONTS_DIR, filename)
-            with open(file_path, 'wb') as f:
-                f.write(font_data)
-            
-            if message:
-                return (message, None)
-            else:
-                return (f"✅ 字体已保存：{filename}", None)
-        except Exception as e:
-            return (f"❌ 保存字体失败：{str(e)}", None)
     
     def _set_target_groups(self, groups: List[str]) -> Tuple[str, None]:
         """设置目标群组"""
@@ -449,64 +378,7 @@ class RootManager:
     def get_weather_city(self) -> str:
         """获取天气城市"""
         return self.settings['weather_city']
-    
+
     def get_target_groups(self) -> List[str]:
         """获取目标群组"""
         return self.settings['target_groups']
-
-    def send_message_to_groups(self, message: str = None, image_path: str = None):
-        """向目标群组发送消息"""
-        if self.settings['qq_send_callback'] and self.settings['target_groups']:
-            for group_id in self.settings['target_groups']:
-                try:
-                    print(f"正在发送消息到群组 {group_id}...")
-                    
-                    # 处理图片路径
-                    valid_image_path = None
-                    if image_path:
-                        # 首先尝试直接使用路径
-                        if os.path.exists(image_path):
-                            print(f"图片路径有效: {image_path}")
-                            valid_image_path = image_path
-                        # 尝试解析路径中的相对路径部分
-                        elif ": " in image_path:
-                            actual_path = image_path.split(": ")[-1].strip()
-                            if os.path.exists(actual_path):
-                                print(f"找到实际图片路径: {actual_path}")
-                                valid_image_path = actual_path
-                            else:
-                                print(f"警告: 解析后的图片路径仍无效: {actual_path}")
-                        # 尝试使用绝对路径
-                        else:
-                            abs_path = os.path.abspath(image_path)
-                            if os.path.exists(abs_path):
-                                print(f"使用绝对路径: {abs_path}")
-                                valid_image_path = abs_path
-                            else:
-                                print(f"警告: 所有图片路径均无效: {image_path}")
-                                
-                    # 添加2秒延时，避免消息发送过快
-                    import time
-                    time.sleep(2)
-                    
-                    # 发送消息
-                    if valid_image_path:
-                        # 先发送图片，后发送文本
-                        print(f"先发送图片到群组 {group_id}, 图片路径: {valid_image_path}")
-                        self.settings['qq_send_callback']('group', group_id, None, valid_image_path)
-                        
-                        # 添加短暂延时，确保图片发送完成
-                        import time
-                        time.sleep(1)  # 这是1秒
-                        
-                        # 如果有文本消息，再发送文本
-                        if message:
-                            print(f"再发送文本到群组 {group_id}")
-                            self.settings['qq_send_callback']('group', group_id, message, None)
-                    else:
-                        print(f"发送纯文本消息到群组 {group_id}")
-                        self.settings['qq_send_callback']('group', group_id, message)
-                except Exception as e:
-                    print(f"发送消息到群组 {group_id} 失败：{e}")
-                    import traceback
-                    print(traceback.format_exc())

@@ -19,20 +19,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 
-from .config import (
+from ..manage.config import (
     POSTER_OUTPUT_DIR, ASTRONOMY_IMAGES_DIR, ASTRONOMY_FONTS_DIR,
-    DEFAULT_FONT, TITLE_FONT, ARTISTIC_FONT, DATE_FONT
+    DEFAULT_FONT, TITLE_FONT, ARTISTIC_FONT, DATE_FONT,DAILY_ASTRONOMY_MESSAGE
 )
-from .ai_core import XiaotianAI
-
+from ..ai.ai_core import XiaotianAI
+from ..manage.root_manager import RootManager
+from .message import MessageSender
 
 class AstronomyPoster:
-    def __init__(self, base_path="xiaotian"):
+    def __init__(self, base_path="xiaotian", root_manager: RootManager = None):
         self.base_path = base_path
         self.images_path = ASTRONOMY_IMAGES_DIR
         self.fonts_path = ASTRONOMY_FONTS_DIR
         self.output_path = POSTER_OUTPUT_DIR
         self.ai_client = XiaotianAI()  # 初始化AI客户端
+        self.root_manager = root_manager
+        self.message_sender = MessageSender(root_manager, self.ai_client)  # 初始化消息发送器
         
         # Ensure directories exist
         os.makedirs(self.images_path, exist_ok=True)
@@ -49,7 +52,162 @@ class AstronomyPoster:
         
         # 保存最新的AI点评，供定时任务使用
         self.latest_ai_comment = None
+        # 储存最近一次处理的天文文本和图片路径
+        self.last_astronomy_post = None
     
+    def daily_astronomy_task(self):
+        """每日天文海报任务"""
+        if not self.root_manager.is_feature_enabled('daily_astronomy'):
+            return
+            
+        print(f"🔭 {datetime.now().strftime('%H:%M')} - 执行每日天文海报任务")
+        
+        if self.last_astronomy_post:
+            # 如果有上次处理的天文海报，使用它
+            image_path, message = self.last_astronomy_post
+            
+            print(f"📢 发送天文海报：{image_path}")
+            
+            # 发送到目标群组
+            target_groups = self.root_manager.get_target_groups()
+            if target_groups:
+                self.message_sender.send_message_to_groups(message, image_path)
+
+                # 延时10秒后发送AI点评
+                if hasattr(self, 'astronomy') and self.astronomy and self.latest_ai_comment:
+                    import threading
+                    def send_ai_comment():
+                        time.sleep(10)  # 延时10秒
+                        try:
+                            ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
+                            self.message_sender.send_message_to_groups(ai_comment_message, None)
+                            print(f"📝 已发送AI点评到群聊")
+                        except Exception as e:
+                            print(f"❌ 发送AI点评失败：{e}")
+                    
+                    # 在后台线程中发送AI点评
+                    comment_thread = threading.Thread(target=send_ai_comment)
+                    comment_thread.start()
+                    self.last_astronomy_post = None  # 清除最近的海报记录
+            else:
+                print("⚠️ 没有设置目标群组，天文海报未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
+        else:
+            print("⚠️ 没有可用的天文海报")
+    
+        
+    def _handle_astronomy_poster(self, content: str, user_id: str) -> str:
+        """处理天文海报制作请求"""
+        try:
+            # 处理天文内容并创建海报
+            poster_path, message = self.process_astronomy_content(
+                content, 
+                user_id=user_id,
+                ai_optimizer=self.ai_client.optimize_text_length
+            )
+            
+            if poster_path:
+                # 保存最近的海报路径和消息，供定时任务使用
+                self.last_astronomy_post = (poster_path, DAILY_ASTRONOMY_MESSAGE)
+                
+                # 向发送天文内容的用户直接回复海报
+                if self.root_manager.settings['qq_send_callback']:
+                    try:
+                        print(f"尝试向用户 {user_id} 发送私聊天文海报")
+                        
+                        # 使用传入的user_id而不是尝试从消息中提取
+                        # 向制作天文海报的用户发送私聊消息
+                        self.root_manager.settings['qq_send_callback']('private', user_id, None, poster_path)
+                        time.sleep(1)  # 短暂延时
+                        self.root_manager.settings['qq_send_callback']('private', user_id, f"🌌 天文海报已生成！\n\n{message}", None)
+                        
+                        print(f"已向用户 {user_id} 发送私聊天文海报")
+                    except Exception as send_err:
+                        import traceback
+                        print(f"向用户发送私聊天文海报失败: {send_err}")
+                        print(traceback.format_exc())
+                
+                return f"🎨 海报制作成功！\n{message}"
+            else:
+                return f"⚠️ {message}"
+                
+        except Exception as e:
+            return f"❌ 海报制作失败：{str(e)}"
+            
+
+    def _handle_astronomy_image(self, user_id: str, image_path: str) -> str:
+        """处理用户发送的天文海报图片"""
+        try:
+            print(f"处理用户 {user_id} 发送的图片: {image_path}")
+            
+            # 检查天文海报模块是否处于等待图片状态
+            if not self.waiting_for_images:
+                print("当前不在等待图片状态，忽略此图片")
+                return "您需要先发送天文内容（以\"小天，每日天文做好啦：\"开头），再上传图片"
+            
+            # 调用天文海报模块处理用户消息和图片
+            poster_path, message = self.process_user_message("", [image_path])
+            
+            if poster_path:
+                # 保存最近的海报路径和消息，供定时任务使用
+                self.last_astronomy_post = (poster_path, message)
+                
+                # 向发送天文内容的用户直接回复海报
+                if self.root_manager.settings['qq_send_callback']:
+                    try:
+                        print(f"尝试向用户 {user_id} 发送图片处理后的天文海报")
+                        
+                        # 向用户发送处理后的海报
+                        self.root_manager.settings['qq_send_callback']('private', user_id, None, poster_path)
+                        
+                        time.sleep(1)  # 短暂延时
+                        self.root_manager.settings['qq_send_callback']('private', user_id, f"🌌 添加图片后的天文海报已生成！\n\n{message}", None)
+                        
+                        print(f"已向用户 {user_id} 发送处理后的天文海报")
+                    except Exception as send_err:
+                        print(f"向用户发送处理后的天文海报失败: {send_err}")
+                        import traceback
+                        print(traceback.format_exc())
+                
+                return f"🎨 图片已添加，海报制作成功！\n{message}\n路径：{poster_path}"
+            else:
+                # 如果没有生成海报，检查等待状态（包括超时自动生成）
+                waiting_status, remaining, auto_poster_path, auto_message = self.check_waiting_status()
+                if auto_poster_path:
+                    # 超时自动生成了海报，发送给用户
+                    return f"🎨 {auto_message}\n路径：{auto_poster_path}"
+                elif waiting_status:
+                    return f"✅ {message} 还剩 {remaining} 秒等待时间。"
+                else:
+                    return f"✅ {message}"
+                
+        except Exception as e:
+            import traceback
+            print(f"处理图片失败: {str(e)}")
+            print(traceback.format_exc())
+            return f"❌ 图片处理失败：{str(e)}"
+
+    def monthly_astronomy_task(self):
+        """月度天文海报合集任务"""
+        if not self.root_manager.is_feature_enabled('monthly_astronomy'):
+            return
+            
+        # 只在每月1号执行
+        if datetime.now().day != 1:
+            return
+            
+        print(f"📚 {datetime.now().strftime('%H:%M')} - 执行月度天文海报合集任务")
+        
+        try:
+            collection_path = self.create_monthly_collection()
+            if collection_path:
+                print(f"📢 生成月度天文海报合集：{collection_path}")
+                
+                # 发送到目标群组
+                self.send_message_to_groups("🌌 上个月的天文海报合集来啦喵~", collection_path)
+        except Exception as e:
+            print(f"❌ 生成月度天文海报合集失败：{str(e)}")
+
+
     def process_astronomy_content(self, content: str, user_id: str = None, group_id: str = None, ai_optimizer=None) -> Tuple[str, str]:
         """处理天文内容并创建海报"""
         # 提取触发短语后的内容
@@ -147,6 +305,83 @@ class AstronomyPoster:
         else:
             # 内容过短
             return None, f"内容太短，无法生成海报。需要至少100字，当前: {char_count}字"
+    
+    
+    def _check_astronomy_timeout(self):
+        """检查天文海报超时状态并自动发送"""
+        if not hasattr(self, 'astronomy') or not self.astronomy:
+            return
+        
+        waiting_status, remaining, auto_poster_path, auto_message = self.check_waiting_status()
+        if auto_poster_path and self.waiting_user_id:
+            # 超时自动生成了海报
+            self.last_astronomy_post = (auto_poster_path, DAILY_ASTRONOMY_MESSAGE)
+            
+            # 发送给等待的用户
+            user_id = self.waiting_user_id
+            group_id = self.waiting_group_id
+            
+            if hasattr(self.root_manager, 'settings') and 'qq_send_callback' in self.root_manager.settings:
+                try:
+                    print(f"自动向用户 {user_id} 发送超时天文海报")
+                    
+                    if group_id is None:
+                        # 私聊发送：先发图片，再发提示消息，最后发点评
+                        self.root_manager.settings['qq_send_callback']('private', user_id, None, auto_poster_path)
+                        
+                        # 延时发送提示消息和点评
+                        import threading
+                        def send_delayed_messages():
+                            time.sleep(2)  # 延时2秒
+                            try:
+                                # 发送提示消息
+                                self.root_manager.settings['qq_send_callback']('private', user_id, "🎨 等待图片超时，已自动生成海报", None)
+                                
+                                # 如果有AI点评，再发送点评
+                                if self.latest_ai_comment:
+                                    time.sleep(1)  # 再延时1秒
+                                    ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
+                                    self.root_manager.settings['qq_send_callback']('private', user_id, ai_comment_message, None)
+                                    print(f"已发送超时海报的AI点评给用户 {user_id}")
+                            except Exception as e:
+                                print(f"发送延时消息失败: {e}")
+                        
+                        # 在后台线程中发送延时消息
+                        threading.Thread(target=send_delayed_messages).start()
+                        
+                    else:
+                        # 群聊发送：先发图片，再发提示消息，最后发点评
+                        self.root_manager.settings['qq_send_callback']('group', group_id, None, auto_poster_path)
+                        
+                        # 延时发送提示消息和点评
+                        import threading
+                        def send_delayed_messages():
+                            time.sleep(2)  # 延时2秒
+                            try:
+                                # 发送提示消息
+                                self.root_manager.settings['qq_send_callback']('group', group_id, "🎨 等待图片超时，已自动生成海报", None)
+                                
+                                # 如果有AI点评，再发送点评
+                                if self.latest_ai_comment:
+                                    time.sleep(1)  # 再延时1秒
+                                    ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
+                                    self.root_manager.settings['qq_send_callback']('group', group_id, ai_comment_message, None)
+                                    print(f"已发送超时海报的AI点评到群 {group_id}")
+                            except Exception as e:
+                                print(f"发送延时消息失败: {e}")
+                        
+                        # 在后台线程中发送延时消息
+                        threading.Thread(target=send_delayed_messages).start()
+                    
+                    # 清除等待状态
+                    self.waiting_user_id = None
+                    self.waiting_group_id = None
+                    
+                except Exception as send_err:
+                    print(f"自动发送超时海报失败: {send_err}")
+            else:
+                print("无法发送超时海报：回调函数不可用")
+
     
     def process_user_message(self, message: str, image_paths: List[str] = None) -> Tuple[Optional[str], str]:
         """处理用户消息，可能包含图片或终止等待的指令"""

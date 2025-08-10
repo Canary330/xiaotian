@@ -9,7 +9,6 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Set
-import threading
 
 # 添加项目路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -20,7 +19,7 @@ from ncatbot.utils import get_log
 
 # 导入小天相关模块
 from xiaotian.scheduler import XiaotianScheduler
-from xiaotian.config import TRIGGER_WORDS, ADMIN_USER_IDS, BLACKLIST_USER_IDS
+from xiaotian.manage.config import ADMIN_USER_IDS, BLACKLIST_USER_IDS
 
 
 class XiaotianQQBot:
@@ -35,7 +34,7 @@ class XiaotianQQBot:
         self.rate_limits: Dict[str, Dict] = {
             'global': {
                 'last_call': 0,
-                'interval': 1.0,  # 全局每秒最多1次调用
+                'interval': 0.1,  # 全局每秒最多10次调用
                 'counter': 0,
                 'max_burst': 10   # 最大突发请求数
             }
@@ -124,9 +123,6 @@ class XiaotianQQBot:
         
         # 注册请求处理（好友申请和群邀请）
         self.bot.add_request_event_handler(self.on_request)
-        
-        # 注册启动事件处理
-        self.bot.add_startup_handler(self.on_startup)
     
     async def on_private_message(self, msg: PrivateMessage):
         """处理私聊消息"""
@@ -162,51 +158,6 @@ class XiaotianQQBot:
                             break
                         except Exception as e:
                             self._log.warning(f"下载图片失败: {e}")
-                
-                # 处理文件类型 - 仅下载字体文件
-                elif segment.get('type') == 'file':
-                    file_name = segment.get('data', {}).get('file')
-                    file_id = segment.get('data', {}).get('file_id')
-                    file_url = segment.get('data', {}).get('url')
-                    
-                    # 检查是否为字体文件
-                    is_font_file = False
-                    if file_name:
-                        lower_name = file_name.lower()
-                        is_font_file = lower_name.endswith(('.ttf', '.otf', '.woff', '.woff2'))
-                    
-                    if not is_font_file:
-                        self._log.warning(f"非字体文件被忽略: {file_name}")
-                        continue
-                        
-                    if file_url:
-                        try:
-                            import requests
-                            self._log.info(f"Root用户正在下载字体文件: {file_name}")
-                            response = requests.get(file_url, timeout=30)
-                            if response.status_code == 200:
-                                image_data = response.content
-                                self._log.info(f"字体文件下载成功，大小: {len(image_data)} 字节")
-                            break
-                        except Exception as e:
-                            self._log.warning(f"下载字体文件失败: {e}")
-                    elif file_id:
-                        try:
-                            # 尝试使用API获取字体文件
-                            self._log.info(f"Root用户尝试使用API获取字体文件: {file_id}")
-                            file_info = self.bot.api.get_file_sync(file_id=file_id)
-                            if file_info and 'url' in file_info:
-                                import requests
-                                response = requests.get(file_info['url'], timeout=30)
-                                if response.status_code == 200:
-                                    image_data = response.content
-                                    self._log.info(f"通过API下载字体文件成功，大小: {len(image_data)} 字节")
-                            else:
-                                # 无法获取文件URL，提供手动处理指南
-                                self._log.warning(f"API未返回文件URL，无法自动下载文件: {file_name}")
-                                await msg.reply(text=f"⚠️ 无法自动下载文件 {file_name}。请尝试用以下方式替代：\n\n1. 将字体文件直接发送到群中作为图片\n2. 或通过FTP/SFTP上传到服务器的xiaotian/data/fonts/目录")
-                        except Exception as e:
-                            self._log.warning(f"通过API获取字体文件失败: {e}")
         # 处理消息（私聊不传group_id）
         response = self.scheduler.process_message(str(msg.user_id), msg.raw_message, None, image_data)
         
@@ -255,26 +206,6 @@ class XiaotianQQBot:
             self._log.info(f"忽略群邀请: {request.group_id}")
             # 不做任何操作，忽略群请求
             pass
-    
-    def on_startup(self):
-        """机器人启动事件处理"""
-        self._log.info("🤖 小天QQ机器人已启动")
-        
-        # 向管理员发送启动通知
-        startup_msg = (f"🤖 小天AI智能体已启动\n⏰ 时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                     f"🌟 版本: v2.0 - 全新超级管理员系统\n"
-                     f"🎯 Root管理员: {self.root_id}\n"
-                     f"🔮 支持功能: 天文海报、词频统计、智能气氛调节")
-                     
-        for admin_id in ADMIN_USER_IDS:
-            try:
-                self._log.info(f"向管理员 {admin_id} 发送启动通知")
-                self.bot.api.post_private_msg_sync(
-                    user_id=int(admin_id), 
-                    msg=startup_msg
-                )
-            except Exception as e:
-                self._log.error(f"向管理员 {admin_id} 发送启动通知失败: {e}")
     
     def _check_rate_limit(self, user_id: str) -> bool:
         """
