@@ -13,8 +13,10 @@ from .message import MessageSender
 
 
 class WeatherTools:
-    def __init__(self):
-        self.root_manager = RootManager()
+    def __init__(self, root_manager=None):
+        if root_manager is None:
+            raise ValueError("WeatherTools requires a RootManager instance")
+        self.root_manager = root_manager
         self.message_sender = MessageSender(self.root_manager, None)  # AI核心暂时不需要传入
     
     def daily_weather_task(self):

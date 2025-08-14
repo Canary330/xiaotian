@@ -45,6 +45,10 @@ class XiaotianQQBot:
         }
         self.user_cooldowns: Dict[str, float] = {}  # 用户冷却时间
         self.user_blacklist: Set[str] = set(BLACKLIST_USER_IDS)  # 黑名单用户
+        
+        # 回复状态管理
+        self.replying_users: Set[str] = set()  # 正在回复的用户集合
+        self.reply_locks: Dict[str, asyncio.Lock] = {}  # 每个用户的回复锁
 
 
         # 注册回调函数
@@ -158,109 +162,185 @@ class XiaotianQQBot:
         """处理私聊消息"""
         self._log.info(f"收到私聊消息: {msg.user_id}:{msg.raw_message}")
         
+        user_id = str(msg.user_id)
+        
         # 检查是否是黑名单用户
-        if str(msg.user_id) in self.user_blacklist:
+        if user_id in self.user_blacklist:
             self._log.info(f"黑名单用户: {msg.user_id}，忽略消息")
             return
         
+        # 检查该用户是否正在被回复
+        if user_id in self.replying_users:
+            self._log.info(f"用户 {msg.user_id} 正在被回复中，忽略新消息")
+            return
+        
         # 检查速率限制
-        if not self._check_rate_limit(str(msg.user_id)):
+        if not self._check_rate_limit(user_id):
             self._log.info(f"用户 {msg.user_id} 触发速率限制")
             return
 
-        # 提取图片或文件数据（如果有）- 仅限root用户且仅限私聊
-        image_data = None
-        # 检查是否为root用户
-        is_root = str(msg.user_id) == self.root_id
+        # 获取用户回复锁
+        if user_id not in self.reply_locks:
+            self.reply_locks[user_id] = asyncio.Lock()
         
-        if is_root and hasattr(msg, 'message') and msg.message:
-            for segment in msg.message:
-                # 处理图片类型
-                if segment.get('type') == 'image':
-                    image_url = segment.get('data', {}).get('url')
-                    if image_url:
-                        try:
-                            import requests
-                            response = requests.get(image_url, timeout=10)
-                            if response.status_code == 200:
-                                image_data = response.content
-                                self._log.info(f"Root用户图片下载成功，大小: {len(image_data)} 字节")
-                            break
-                        except Exception as e:
-                            self._log.warning(f"下载图片失败: {e}")
-        # 处理消息（私聊不传group_id）
-        response = self.scheduler.process_message(str(msg.user_id), msg.raw_message, None, image_data)
-        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id))
-        
-        
-        for i in range(len(wait_time)):
-            if cleaned_response[i]:
-                await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
-                await msg.reply(text=cleaned_response[i])
-        if like_response:
-            await asyncio.sleep(3 + random.uniform(-1, 2))
-            await msg.reply(text=like_response)
+        async with self.reply_locks[user_id]:
+            # 标记开始回复
+            self.replying_users.add(user_id)
+            
+            try:
+                # 提取图片或文件数据（如果有）- 仅限root用户且仅限私聊
+                image_data = None
+                # 检查是否为root用户
+                is_root = user_id == self.root_id
+                
+                if is_root and hasattr(msg, 'message') and msg.message:
+                    for segment in msg.message:
+                        # 处理图片类型
+                        if segment.get('type') == 'image':
+                            image_url = segment.get('data', {}).get('url')
+                            if image_url:
+                                try:
+                                    import requests
+                                    response = requests.get(image_url, timeout=10)
+                                    if response.status_code == 200:
+                                        image_data = response.content
+                                        self._log.info(f"Root用户图片下载成功，大小: {len(image_data)} 字节")
+                                    break
+                                except Exception as e:
+                                    self._log.warning(f"下载图片失败: {e}")
+                                    
+                # 处理消息（私聊不传group_id）
+                response = self.scheduler.process_message(user_id, msg.raw_message, None, image_data)
+                wait_time, cleaned_response, like_response = self.handle_response(response, user_id)
+                
+                for i in range(len(wait_time)):
+                    if cleaned_response[i]:
+                        await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
+                        await msg.reply(text=cleaned_response[i])
+                if like_response:
+                    await asyncio.sleep(3 + random.uniform(-1, 2))
+                    await msg.reply(text=like_response)
+                    
+            finally:
+                # 标记回复结束
+                self.replying_users.discard(user_id)
 
     async def on_group_message(self, msg: GroupMessage):
         """处理群聊消息"""
         self._log.info(f"收到群聊消息: {msg.group_id}/{msg.user_id}:{msg.raw_message}")
         
+        user_id = str(msg.user_id)
+        group_id = str(msg.group_id)
+        user_key = f"{user_id}_{group_id}"  # 群聊中的用户唯一标识
+        
         # 检查是否是黑名单用户
-        if str(msg.user_id) in self.user_blacklist:
+        if user_id in self.user_blacklist:
             self._log.info(f"黑名单用户: {msg.user_id}，忽略消息")
             return
         
+        # 检查该用户是否正在被回复
+        if user_key in self.replying_users:
+            self._log.info(f"用户 {msg.user_id} 在群 {msg.group_id} 正在被回复中，忽略新消息")
+            return
+        
         # 检查速率限制
-        if not self._check_rate_limit(f"group_{msg.group_id}_{msg.user_id}"):
+        if not self._check_rate_limit(f"group_{group_id}_{user_id}"):
             self._log.info(f"用户 {msg.user_id} 在群 {msg.group_id} 触发速率限制")
             return
         
-        image_data = None
-
-        # 处理消息（传入群组ID以支持分别记忆）
-        response = self.scheduler.process_message(str(msg.user_id), msg.raw_message, str(msg.group_id), image_data)
-
-        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
+        # 获取用户回复锁
+        if user_key not in self.reply_locks:
+            self.reply_locks[user_key] = asyncio.Lock()
         
-        if wait_time and cleaned_response:
-            for i in range(len(wait_time)):
-                if cleaned_response[i]:
-                    await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
-                    await msg.reply(text=cleaned_response[i])
-            if like_response:
-                await asyncio.sleep(3 + random.uniform(-1, 2))
-                await msg.reply(text=like_response)
-        elif cleaned_response:
-            await asyncio.sleep(4 + random.uniform(0, 3))
-            await msg.reply(text=cleaned_response)
+        async with self.reply_locks[user_key]:
+            # 标记开始回复
+            self.replying_users.add(user_key)
+            
+            try:
+                image_data = None
 
-        self.scheduler.last_user_id = str(msg.user_id)
-        self.scheduler.last_group_id = str(msg.group_id)
+                # 处理消息（传入群组ID以支持分别记忆）
+                response = self.scheduler.process_message(user_id, msg.raw_message, group_id, image_data)
 
-
-    async def handle_wakeup_(self, msg: GroupMessage):
-        if self.scheduler.wait_for_wakeup:
-            last_wakeup_time = time.time()
-            self.scheduler.waiting_time = 10
-            while time.time() - last_wakeup_time < self.scheduler.waiting_time:
-                use_tools = str(msg.group_id) is not None
-                response = self.scheduler.ai.get_response(msg.raw_message, user_id=str(msg.user_id), group_id=str(msg.group_id), use_tools=use_tools)
-                wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
+                wait_time, cleaned_response, like_response = self.handle_response(response, user_id, group_id)
+                
                 if wait_time and cleaned_response:
                     for i in range(len(wait_time)):
                         if cleaned_response[i]:
-                            time_sleep = wait_time[i] + random.uniform(0, 3)
-                            self.scheduler.waiting_time += time_sleep
-                            await asyncio.sleep(time_sleep)
-                            await msg.reply(text=cleaned_response[i])
+                            if i != 0:
+                                await asyncio.sleep(wait_time[i] + random.uniform(0, 1))
+                            # 检查是否有其他用户请求，如果没有则不使用引用
+                            if len(self.replying_users) <= 1:  # 只有当前用户在回复队列中
+                                await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response[i])
+                            else:
+                                await msg.reply(text=cleaned_response[i])
                     if like_response:
-                        await asyncio.sleep(3 + random.uniform(-1, 2))
-                        await msg.reply(text=like_response)
+                        await asyncio.sleep(1 + random.uniform(-1, 1))
+                        if len(self.replying_users) <= 1:
+                            await self.bot.api.post_group_msg(group_id=int(group_id), text=like_response)
+                        else:
+                            await msg.reply(text=like_response)
                 elif cleaned_response:
-                    await asyncio.sleep(4 + random.uniform(0, 3))
-                    await msg.reply(text=cleaned_response)
-                time.sleep(0.2)
-            self.scheduler.wait_for_wakeup = False
+                    await asyncio.sleep(3 + random.uniform(0, 1))
+                    if len(self.replying_users) <= 1:
+                        await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response)
+                    else:
+                        await msg.reply(text=cleaned_response)
+
+                self.scheduler.last_user_id = user_id
+                self.scheduler.last_group_id = group_id
+                
+            finally:
+                # 标记回复结束
+                self.replying_users.discard(user_key)
+
+
+    async def handle_wakeup_(self, msg: GroupMessage):
+        """处理唤醒状态中的消息"""
+        user_id = str(msg.user_id)
+        group_id = str(msg.group_id)
+        user_key = f"{user_id}_{group_id}"  # 群聊中的用户唯一标识
+        
+        # 检查该用户是否正在被回复
+        if user_key in self.replying_users:
+            self._log.info(f"用户 {msg.user_id} 在群 {msg.group_id} 正在被回复中，handle_wakeup_跳过处理")
+            return
+            
+        if self.scheduler.wait_for_wakeup:
+            # 获取用户回复锁
+            if user_key not in self.reply_locks:
+                self.reply_locks[user_key] = asyncio.Lock()
+            
+            async with self.reply_locks[user_key]:
+                # 标记开始回复
+                self.replying_users.add(user_key)
+                
+                try:
+                    last_wakeup_time = time.time()
+                    self.scheduler.waiting_time = 10
+                    while time.time() - last_wakeup_time < self.scheduler.waiting_time:
+                        use_tools = str(msg.group_id) is not None
+                        response = self.scheduler.ai.get_response(msg.raw_message, user_id=str(msg.user_id), group_id=str(msg.group_id), use_tools=use_tools)
+                        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
+                        if wait_time and cleaned_response:
+                            for i in range(len(wait_time)):
+                                if cleaned_response[i]:
+                                    time_sleep = wait_time[i] + random.uniform(0, 3)
+                                    self.scheduler.waiting_time += time_sleep
+                                    await asyncio.sleep(time_sleep)
+                                    await msg.reply(text=cleaned_response[i])
+                            if like_response:
+                                await asyncio.sleep(3 + random.uniform(-1, 2))
+                                await msg.reply(text=like_response)
+                        elif cleaned_response:
+                            await asyncio.sleep(4 + random.uniform(0, 3))
+                            await msg.reply(text=cleaned_response)
+                        time.sleep(0.2)
+                    self.scheduler.wait_for_wakeup = False
+                    
+                finally:
+                    # 标记回复结束
+                    self.replying_users.discard(user_key)
 
 
     async def on_request(self, request: Request):

@@ -67,13 +67,19 @@ class XiaotianScheduler:
     def __init__(self, root_id: str = None, qq_send_callback=None, ai = None):
         # 初始化核心组件
         self.ai = ai
-        self.weather_tools = WeatherTools()
+        
+        # 先初始化 RootManager，因为其他组件依赖它
+        self.root_manager = RootManager(root_id=root_id)
+        
+        # 然后初始化需要 RootManager 的组件
+        self.weather_tools = WeatherTools(root_manager=self.root_manager)
         self.scheduler = SimpleScheduler()
         
         # 初始化新功能组件
-        self.root_manager = RootManager(root_id=root_id)
         self.astronomy = AstronomyPoster(root_manager=self.root_manager)
         self.wait_for_wakeup = False
+        self.wakeup_time = 0  # 唤醒时间戳
+        self.waiting_time = 10  # 默认唤醒超时时间（10秒）
         self.last_user_id: str = None  # 最后一个用户ID
         self.last_group_id: str = None  # 最后一个群组ID
 
@@ -83,7 +89,6 @@ class XiaotianScheduler:
         self.message_sender = MessageSender(self.root_manager, self.ai)
         
         self.is_running = False
-        self.waiting_time = 10
         
         
     def start_scheduler(self):
@@ -123,6 +128,26 @@ class XiaotianScheduler:
 
     def process_message(self, user_id: str, message: str, group_id: str = None, image_data: bytes = None) -> tuple[str, str, str]:
         """处理用户消息"""
+        
+        # 检查唤醒状态是否超时
+        current_time = time.time()
+        if self.wait_for_wakeup and (current_time - self.wakeup_time) > self.waiting_time:
+            self.wait_for_wakeup = False
+            print(f"唤醒状态超时，已自动关闭")
+            
+        # 快速路径：检查是否是唤醒状态中的同一用户
+        is_wakeup_continue = (self.wait_for_wakeup and 
+                             self.last_user_id == user_id and 
+                             self.last_group_id == group_id)
+        
+        # 快速路径：检查是否包含唤醒词（优化：避免重复检测）
+        has_trigger_word = False
+        trigger_word_used = None
+        for trigger in TRIGGER_WORDS:
+            if message.startswith(trigger):
+                has_trigger_word = True
+                trigger_word_used = trigger
+                break
         # 私聊消息的处理
         if group_id is None:
             # 私聊中只处理Root命令和"每日天文"命令
@@ -296,56 +321,71 @@ class XiaotianScheduler:
         else:
             """处理普通聊天消息"""
         
-        # 检测情绪并考虑自动触发
-        emotion = self.ai.detect_emotion(message)
+        # 检测情绪并考虑自动触发（仅在群聊中）
         should_auto_trigger = False
+        if group_id:
+            emotion = self.ai.detect_emotion(message)
+            if emotion in ('cold', 'hot'):
+                if self.root_manager.can_auto_trigger(group_id):
+                    should_auto_trigger = True
+                    self.root_manager.record_auto_trigger(group_id)
+                    print(f"群 {group_id} 自动触发响应，情绪: {emotion}")
+        else:
+            emotion = None
         
-        # 添加调试信息，查看情绪检测结果
-        print(f"消息情绪检测结果: {emotion}, 内容: {message[:20]}...")
+        # 检查是否包含唤醒词或需要自动触发，或者是在唤醒状态中的后续对话
+        is_triggered = (has_trigger_word or 
+                       should_auto_trigger or 
+                       is_wakeup_continue)
         
-        # 只在群聊中支持自动触发
-        if group_id and (emotion == 'cold' or emotion == 'hot'):
-            print(f"检测到可触发情绪: {emotion}")
-            if self.root_manager.can_auto_trigger(group_id):
-                should_auto_trigger = True
-                self.root_manager.record_auto_trigger(group_id)
-                print(f"将在群 {group_id} 自动触发响应")
-            else:
-                print(f"群 {group_id} 不满足自动触发条件")
-        
-        # 检查是否包含唤醒词或需要自动触发
-        is_triggered = any(message.startswith(trigger) for trigger in TRIGGER_WORDS) or should_auto_trigger
-        if is_triggered and not (self.wait_for_wakeup and self.last_user_id == user_id and self.last_group_id == group_id):
+        if is_triggered:
             # 提取唤醒词后的内容
             content = message
-            if any(message.startswith(trigger) for trigger in TRIGGER_WORDS):
-                for trigger in TRIGGER_WORDS:
-                    if message == trigger:
-                        content = trigger
-                    elif message.startswith(trigger):
-                        parts = message.split(trigger, 1)
-                        if len(parts) > 1 and len(parts[1]) > 0 and parts[1][0] in ".,!?;:，。！？；：":
-                            content = ''.join(parts[1:]).strip()
-                            break
-                        else:
-                            content = parts[1].strip()
-                            break
-                self.scheduler.wait_for_wakeup = True
+            if has_trigger_word:
+                # 使用已找到的触发词
+                trigger = trigger_word_used
+                if message == trigger:
+                    content = trigger
+                elif message.startswith(trigger):
+                    parts = message.split(trigger, 1)
+                    if len(parts) > 1 and len(parts[1]) > 0 and parts[1][0] in ".,!?;:，。！？；：":
+                        content = ''.join(parts[1:]).strip()
+                    else:
+                        content = parts[1].strip()
+                # 设置唤醒状态，持续一段时间
+                self.wait_for_wakeup = True
+                self.wakeup_time = time.time()  # 记录唤醒时间
+                self.waiting_time = 10  # 重置为默认10秒
+                print(f"用户 {user_id} 唤醒了小天，超时时间: {self.waiting_time}秒")
+            elif is_wakeup_continue:
+                # 唤醒状态中的后续对话
+                if self.last_user_id == user_id and self.last_group_id == group_id:
+                    # 同一用户继续发消息，重新计时
+                    self.wakeup_time = time.time()
+                    self.waiting_time = 10  # 重置为10秒
+                    print(f"用户 {user_id} 继续对话，重新计时: {self.waiting_time}秒")
 
             # 如果是自动触发，生成合适的回复
-            if should_auto_trigger and not any(trigger in message for trigger in TRIGGER_WORDS):
+            if should_auto_trigger and not has_trigger_word:
                 if emotion == 'cold':
                     content = f"看起来有点冷淡呢，来聊聊天吧！原消息：{message}"
                 elif emotion == 'hot':
                     content = f"感觉很激动呢，一起开心一下！原消息：{message}"
+            
+            # 更新最后交互的用户信息
+            self.last_user_id = user_id
+            self.last_group_id = group_id
             
             # AI对话，传入群组信息以支持分别记忆
             # 在群聊中允许使用工具，在私聊中只能聊天
             use_tools = group_id is not None
             response = self.ai.get_response(content, user_id=user_id, group_id=group_id, use_tools=use_tools)
             return response
-        elif self.last_user_id != user_id and self.last_group_id == group_id:
+        elif self.wait_for_wakeup and self.last_group_id == group_id and self.last_user_id != user_id:
+            # 在唤醒状态中，其他用户发消息，缩短超时时间到5秒
             self.waiting_time = 5
+            print(f"其他用户 {user_id} 在群 {group_id} 发消息，缩短超时时间到 {self.waiting_time}秒")
+            
         return ""  # 未触发时返回空字符串
 
     def daily_cleanup_task(self):

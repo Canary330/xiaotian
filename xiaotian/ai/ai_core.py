@@ -10,7 +10,15 @@ import re
 import time
 import random
 from typing import List, Dict, Any
-from ..manage.config import API_KEY, BASE_URL, XIAOTIAN_SYSTEM_PROMPT, GLOBAL_RATE_LIMIT, USER_RATE_LIMIT, MAX_MEMORY_COUNT, MEMORY_FILE, CHANGE_PERSONALITY_PROMPT, USE_MODEL, BASIC_PROMPT, LIKE_THRESHOLDS, LIKE_PERSONALITY_CHANGE_THRESHOLD, LIKE_RESET_THRESHOLD, GENTLE_PERSONALITY_LIKE_MULTIPLIER, SHARP_PERSONALITY_LIKE_MULTIPLIER, GENTLE_PERSONALITY_INDICES, SHARP_PERSONALITY_INDICES, ENHANCED_GENTLE_PERSONALITIES, ENHANCED_SHARP_PERSONALITIES, LIKE_EMOTIONS, LIKE_SPEED_DECAY_RATE, LIKE_MIN_SPEED_MULTIPLIER, SYSTEM_PROMPT, LAST_PROMOT
+from ..manage.config import (
+    API_KEY, BASE_URL, XIAOTIAN_SYSTEM_PROMPT, GLOBAL_RATE_LIMIT, USER_RATE_LIMIT, 
+    MAX_MEMORY_COUNT, MEMORY_FILE, CHANGE_PERSONALITY_PROMPT, USE_MODEL, BASIC_PROMPT, 
+    LIKE_THRESHOLDS, LIKE_PERSONALITY_CHANGE_THRESHOLD, LIKE_RESET_THRESHOLD, 
+    GENTLE_PERSONALITY_LIKE_MULTIPLIER, SHARP_PERSONALITY_LIKE_MULTIPLIER, 
+    GENTLE_PERSONALITY_INDICES, SHARP_PERSONALITY_INDICES, ENHANCED_GENTLE_PERSONALITIES, 
+    ENHANCED_SHARP_PERSONALITIES, LIKE_EMOTIONS, LIKE_SPEED_DECAY_RATE, 
+    LIKE_MIN_SPEED_MULTIPLIER, SYSTEM_PROMPT, LAST_PROMOT
+)
 
 class XiaotianAI:
     def __init__(self):
@@ -376,54 +384,67 @@ class XiaotianAI:
     def parse_ai_response_for_like(self, ai_response: str) -> tuple:
         """解析AI回复中的JSON格式，返回(cleaned_response, like_value, wait_time, not_even_wrong)"""
         like_value = None
-        wait_time = None
+        wait_time = []
+        content = []
         not_even_wrong = False
-        content = None
+        
         if not ai_response:
             return "", None, None, False
-        # 首先检查是否有完整的JSON格式
+            
         try:
-            # 尝试解析完整的JSON
-            json_pattern = r'\{.*?\}'
-            json_matches = re.findall(json_pattern, ai_response, re.DOTALL)
-            wait_time = []
-            content = []
-            for json_str in json_matches:
-                try:
-                    data = json.loads(json_str)
+            # 尝试直接解析整个响应为JSON
+            full_data = json.loads(ai_response.strip())
+            
+            # 检查是否是新格式：{"data": [...], "like": 数字}
+            if isinstance(full_data, dict) and 'data' in full_data:
+                data_array = full_data['data']
+                
+                # 处理data数组中的每个对象
+                for item in data_array:
+                    if isinstance(item, dict):
+                        if 'like' in item:
+                            like_value = int(item['like'])
+                        if 'wait_time' in item:
+                            wait_time.append(int(item['wait_time']))
+                        if 'content' in item:
+                            cleaned_content = self._strip_md(item['content'])
+                            content.append(cleaned_content)
+                        if 'not_even_wrong' in item:
+                            not_even_wrong = bool(item['not_even_wrong'])
+                
+                # 检查顶层是否有like字段
+                if 'like' in full_data:
+                    like_value = int(full_data['like'])
                     
-                    # 提取各个字段
-                    if 'like' in data:
-                        like_value = int(data['like'])
-                    if 'wait_time' in data:
-                        wait_time.append(int(data['wait_time']))
-                    if 'content' in data:
-                        # 使用_strip_md去除markdown格式
-                        cleaned_content = self._strip_md(data['content'])
-                        content.append(cleaned_content)
-                    if 'not_even_wrong' in data:
-                        not_even_wrong = bool(data['not_even_wrong'])
-                except (json.JSONDecodeError, ValueError):
-                    continue
+                return content, like_value, wait_time, not_even_wrong
+                
+            # 如果是旧格式的单个JSON对象
+            elif isinstance(full_data, dict):
+                if 'like' in full_data:
+                    like_value = int(full_data['like'])
+                if 'wait_time' in full_data:
+                    wait_time.append(int(full_data['wait_time']))
+                if 'content' in full_data:
+                    cleaned_content = self._strip_md(full_data['content'])
+                    content.append(cleaned_content)
+                if 'not_even_wrong' in full_data:
+                    not_even_wrong = bool(full_data['not_even_wrong'])
+                    
+                return content, like_value, wait_time, not_even_wrong
         except Exception:
             pass
         
+        # 如果没有解析到任何内容，返回原始响应
         if not content and not wait_time and like_value is None:
             content_ = self._strip_md(ai_response)
             return content_, None, None, False
 
+        # 确保like_value有默认值
         if like_value is None:
             like_value = 0
 
-        # 如果有content字段，使用content作为回复内容
-        if content is not None:
-            cleaned_response = content
-        else:
-            # 清理响应中的空白和多余符号
-            cleaned_response = ai_response.strip()
-            cleaned_response = re.sub(r',\s*}', '}', cleaned_response)
-            cleaned_response = re.sub(r'}\s*,\s*$', '}', cleaned_response)
-            cleaned_response = cleaned_response.strip()
+        # 返回解析结果
+        cleaned_response = content if content else ""
         
         # 如果标记为not_even_wrong，返回空字符串表示不回复
         if not_even_wrong:
@@ -436,25 +457,24 @@ class XiaotianAI:
         return self.memory_storage.get(memory_key, [])
     
     def detect_emotion(self, message: str) -> str:
-        """检测消息情绪 - 简单的关键词检测"""
+        """检测消息情绪 - 简单的关键词检测，优化性能"""
         # 冷淡词汇
         cold_keywords = ['无聊', '没意思', '算了', '不想', '冷', '沉默', '不说话']
-        # 热情词汇
+        # 热情词汇  
         hot_keywords = ['激动', '兴奋', '开心', '高兴', '棒', '太好了', 'amazing', '牛逼', '厉害', '哇', '超级']
         
         message_lower = message.lower()
         
-        cold_count = sum(1 for word in cold_keywords if word in message_lower)
-        hot_count = sum(1 for word in hot_keywords if word in message_lower)
-        
-        if cold_count > 0:
-            cold_count = 0
-            return 'cold'
-        elif hot_count > 0:
-            hot_count = 0
-            return 'hot'
-        else:
-            return 'neutral'
+        # 快速检测，一旦找到就返回
+        for word in cold_keywords:
+            if word in message_lower:
+                return 'cold'
+                
+        for word in hot_keywords:
+            if word in message_lower:
+                return 'hot'
+                
+        return 'neutral'
     
     def _check_rate_limit(self, user_id: str = None) -> bool:
         """检查API调用速率限制
