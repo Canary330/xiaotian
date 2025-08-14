@@ -5,6 +5,8 @@
 
 import sys
 import os
+import random
+import threading
 import asyncio
 import time
 from datetime import datetime
@@ -20,6 +22,7 @@ from ncatbot.utils import get_log
 # 导入小天相关模块
 from xiaotian.scheduler import XiaotianScheduler
 from xiaotian.manage.config import ADMIN_USER_IDS, BLACKLIST_USER_IDS
+from xiaotian.ai.ai_core import XiaotianAI
 
 
 class XiaotianQQBot:
@@ -28,6 +31,7 @@ class XiaotianQQBot:
         self._log = get_log()
         self.root_id = None  # 将在start()中设置
         self.scheduler = None  # 将在start()中初始化
+        self.ai = None
         self.bot = BotClient()
         
         # API调用速率限制
@@ -41,7 +45,8 @@ class XiaotianQQBot:
         }
         self.user_cooldowns: Dict[str, float] = {}  # 用户冷却时间
         self.user_blacklist: Set[str] = set(BLACKLIST_USER_IDS)  # 黑名单用户
-        
+
+
         # 注册回调函数
         self.register_handlers()
     def qq_send_callback(self, msg_type: str, target_id: str, message: str = None, image_path: str = None):
@@ -120,10 +125,35 @@ class XiaotianQQBot:
         
         # 注册群聊消息处理
         self.bot.add_group_event_handler(self.on_group_message)
-        
+        self.bot.add_group_event_handler(self.handle_wakeup_)
         # 注册请求处理（好友申请和群邀请）
         self.bot.add_request_event_handler(self.on_request)
     
+    def handle_response(self, response:str, user_id: str, group_id: str = None) -> tuple:
+        # 解析AI回复中的JSON信息并处理
+            memory_key = self.ai._get_memory_key(user_id, group_id)
+            cleaned_response, like_value, wait_time, not_even_wrong = self.ai.parse_ai_response_for_like(response)
+            
+            # 如果标记为not_even_wrong，不进行回复
+            if not_even_wrong:
+                print(f"🚫 用户 {memory_key} 的消息被标记为not_even_wrong，不进行回复")
+                return "","",""
+            
+            if like_value:
+                notification_message = ""
+                notification_message = self.ai.update_user_like(memory_key, like_value)
+                # 获取当前like状态并添加表情显示
+                like_status = self.ai.get_user_like_status(memory_key)
+                like_display = self.ai.format_like_display(like_status['total_like'])
+                # 组合最终回复：原回复 + like显示 + 可能的通知消息
+                like_response = f"{like_display}"
+                if notification_message:
+                    like_response += f"{notification_message}"
+            else:
+                like_response = ""
+            # 返回最终回复
+            return wait_time, cleaned_response, like_response
+
     async def on_private_message(self, msg: PrivateMessage):
         """处理私聊消息"""
         self._log.info(f"收到私聊消息: {msg.user_id}:{msg.raw_message}")
@@ -160,11 +190,17 @@ class XiaotianQQBot:
                             self._log.warning(f"下载图片失败: {e}")
         # 处理消息（私聊不传group_id）
         response = self.scheduler.process_message(str(msg.user_id), msg.raw_message, None, image_data)
+        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id))
         
-        if response:
-            await asyncio.sleep(1)  # 等待1秒（1000毫秒）
-            await msg.reply(text=response)
-    
+        
+        for i in range(len(wait_time)):
+            if cleaned_response[i]:
+                await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
+                await msg.reply(text=cleaned_response[i])
+        if like_response:
+            await asyncio.sleep(3 + random.uniform(-1, 2))
+            await msg.reply(text=like_response)
+
     async def on_group_message(self, msg: GroupMessage):
         """处理群聊消息"""
         self._log.info(f"收到群聊消息: {msg.group_id}/{msg.user_id}:{msg.raw_message}")
@@ -183,10 +219,50 @@ class XiaotianQQBot:
 
         # 处理消息（传入群组ID以支持分别记忆）
         response = self.scheduler.process_message(str(msg.user_id), msg.raw_message, str(msg.group_id), image_data)
+
+        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
         
-        if response:
-            await msg.reply(text=response)
-    
+        if wait_time and cleaned_response:
+            for i in range(len(wait_time)):
+                if cleaned_response[i]:
+                    await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
+                    await msg.reply(text=cleaned_response[i])
+            if like_response:
+                await asyncio.sleep(3 + random.uniform(-1, 2))
+                await msg.reply(text=like_response)
+        elif cleaned_response:
+            await asyncio.sleep(4 + random.uniform(0, 3))
+            await msg.reply(text=cleaned_response)
+
+        self.scheduler.last_user_id = str(msg.user_id)
+        self.scheduler.last_group_id = str(msg.group_id)
+
+
+    async def handle_wakeup_(self, msg: GroupMessage):
+        if self.scheduler.wait_for_wakeup:
+            last_wakeup_time = time.time()
+            self.scheduler.waiting_time = 10
+            while time.time() - last_wakeup_time < self.scheduler.waiting_time:
+                use_tools = str(msg.group_id) is not None
+                response = self.scheduler.ai.get_response(msg.raw_message, user_id=str(msg.user_id), group_id=str(msg.group_id), use_tools=use_tools)
+                wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
+                if wait_time and cleaned_response:
+                    for i in range(len(wait_time)):
+                        if cleaned_response[i]:
+                            time_sleep = wait_time[i] + random.uniform(0, 3)
+                            self.scheduler.waiting_time += time_sleep
+                            await asyncio.sleep(time_sleep)
+                            await msg.reply(text=cleaned_response[i])
+                    if like_response:
+                        await asyncio.sleep(3 + random.uniform(-1, 2))
+                        await msg.reply(text=like_response)
+                elif cleaned_response:
+                    await asyncio.sleep(4 + random.uniform(0, 3))
+                    await msg.reply(text=cleaned_response)
+                time.sleep(0.2)
+            self.scheduler.wait_for_wakeup = False
+
+
     async def on_request(self, request: Request):
         """处理请求（好友申请和群邀请）"""
         self._log.info(f"收到请求: {request.request_type} - {request.user_id}")
@@ -268,7 +344,8 @@ class XiaotianQQBot:
             return
             
         # 初始化调度器，传入QQ发送回调
-        self.scheduler = XiaotianScheduler(root_id=root_id, qq_send_callback=self.qq_send_callback)
+        self.ai = XiaotianAI()
+        self.scheduler = XiaotianScheduler(root_id=root_id, qq_send_callback=self.qq_send_callback, ai = self.ai)
         
         # 检查是否有必要的图片和字体文件
         self._check_required_files()

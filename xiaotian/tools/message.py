@@ -1,4 +1,6 @@
 import os
+import time
+import random
 from ..manage.root_manager import RootManager
 from ..ai.ai_core import XiaotianAI
 from ..manage.config import TRIGGER_WORDS
@@ -40,9 +42,6 @@ class MessageSender:
                             else:
                                 print(f"警告: 所有图片路径均无效: {image_path}")
 
-                    # 添加延时，避免消息发送过快
-                    import time
-                    import random
                     wait_time = min(30, max(2, len(message) // 3)) if message else 2
                     time.sleep(wait_time + random.uniform(-1, 1))
 
@@ -66,57 +65,3 @@ class MessageSender:
                     print(f"发送消息到群组 {group_id} 失败：{e}")
                     import traceback
                     print(traceback.format_exc())
-
-    def _handle_chat(self, user_id: str, message: str, group_id: str = None) -> str:
-        """处理普通聊天消息"""
-        
-        # 检测情绪并考虑自动触发
-        emotion = self.ai.detect_emotion(message)
-        should_auto_trigger = False
-        
-        # 添加调试信息，查看情绪检测结果
-        print(f"消息情绪检测结果: {emotion}, 内容: {message[:20]}...")
-        
-        # 只在群聊中支持自动触发
-        if group_id and (emotion == 'cold' or emotion == 'hot'):
-            print(f"检测到可触发情绪: {emotion}")
-            if self.root_manager.can_auto_trigger(group_id):
-                should_auto_trigger = True
-                self.root_manager.record_auto_trigger(group_id)
-                print(f"将在群 {group_id} 自动触发响应")
-            else:
-                print(f"群 {group_id} 不满足自动触发条件")
-        
-        # 检查是否包含唤醒词或需要自动触发
-        is_triggered = any(message.startswith(trigger) for trigger in TRIGGER_WORDS) or should_auto_trigger
-        
-        if is_triggered:
-            # 提取唤醒词后的内容
-            content = message
-            if any(message.startswith(trigger) for trigger in TRIGGER_WORDS):
-                for trigger in TRIGGER_WORDS:
-                    if message.startswith(trigger):
-                        parts = message.split(trigger, 1)
-                        if len(parts) > 1 and len(parts[1]) > 0 and parts[1][0] in ".,!?;:，。！？；：":
-                            content = ''.join(parts[1:]).strip()
-                            break
-                        else:
-                            content = parts[1].strip()
-                            break
-
-            # 如果是自动触发，生成合适的回复
-            if should_auto_trigger and not any(trigger in message for trigger in TRIGGER_WORDS):
-                if emotion == 'cold':
-                    content = f"看起来有点冷淡呢，来聊聊天吧！原消息：{message}"
-                elif emotion == 'hot':
-                    content = f"感觉很激动呢，一起开心一下！原消息：{message}"
-            
-            # AI对话，传入群组信息以支持分别记忆
-            # 在群聊中允许使用工具，在私聊中只能聊天
-            use_tools = group_id is not None
-            response = self.ai.get_response(content, user_id=user_id, group_id=group_id, use_tools=use_tools)
-
-            # 直接返回回复，不加前缀
-            return response
-        
-        return ""  # 未触发时返回空字符串

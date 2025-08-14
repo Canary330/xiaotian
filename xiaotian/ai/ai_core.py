@@ -8,9 +8,9 @@ import json
 import os
 import re
 import time
+import random
 from typing import List, Dict, Any
-from ..manage.config import API_KEY, BASE_URL, XIAOTIAN_SYSTEM_PROMPT, GLOBAL_RATE_LIMIT, USER_RATE_LIMIT, MAX_MEMORY_COUNT
-
+from ..manage.config import API_KEY, BASE_URL, XIAOTIAN_SYSTEM_PROMPT, GLOBAL_RATE_LIMIT, USER_RATE_LIMIT, MAX_MEMORY_COUNT, MEMORY_FILE, CHANGE_PERSONALITY_PROMPT, USE_MODEL, BASIC_PROMPT, LIKE_THRESHOLDS, LIKE_PERSONALITY_CHANGE_THRESHOLD, LIKE_RESET_THRESHOLD, GENTLE_PERSONALITY_LIKE_MULTIPLIER, SHARP_PERSONALITY_LIKE_MULTIPLIER, GENTLE_PERSONALITY_INDICES, SHARP_PERSONALITY_INDICES, ENHANCED_GENTLE_PERSONALITIES, ENHANCED_SHARP_PERSONALITIES, LIKE_EMOTIONS, LIKE_SPEED_DECAY_RATE, LIKE_MIN_SPEED_MULTIPLIER, SYSTEM_PROMPT, LAST_PROMOT
 
 class XiaotianAI:
     def __init__(self):
@@ -20,12 +20,36 @@ class XiaotianAI:
         )
         # 改为按用户/群组分别存储记忆
         self.memory_storage: Dict[str, List[Dict[str, str]]] = {}
+        # 存储每个用户的固定性格索引或自定义性格文本
+        self.user_personality: Dict[str, Any] = {}
+        # 存储每个用户的like状态
+        self.user_like_status: Dict[str, Dict] = {}
         self.api_calls = {
             'last_reset': time.time(),
             'count': 0,
             'user_counts': {}  # 用户级别的API调用计数
         }
         
+        # 记录文件最后修改时间，用于判断是否需要重新加载
+        self.memory_file_mtime = 0
+        
+        # 初始化时加载记忆
+        self.load_memory(MEMORY_FILE)
+        
+    def _should_reload_memory(self, file_path: str) -> bool:
+        """检查是否需要重新加载记忆文件"""
+        try:
+            if not os.path.exists(file_path):
+                return False
+            
+            current_mtime = os.path.getmtime(file_path)
+            if current_mtime > self.memory_file_mtime:
+                self.memory_file_mtime = current_mtime
+                return True
+            return False
+        except Exception:
+            return False
+    
     def _get_memory_key(self, user_id: str, group_id: str = None) -> str:
         """生成记忆存储键，区分私聊和群聊"""
         if group_id:
@@ -43,6 +67,369 @@ class XiaotianAI:
         # 保持记忆在限制范围内
         if len(self.memory_storage[memory_key]) > MAX_MEMORY_COUNT:
             self.memory_storage[memory_key] = self.memory_storage[memory_key][-MAX_MEMORY_COUNT:]
+    
+    def get_user_personality(self, memory_key: str) -> str:
+        """获取或生成用户的固定性格"""
+        # 如果用户还没有分配性格，随机选择一个内置性格
+        if memory_key not in self.user_personality:
+            personality_index = random.randint(0, len(XIAOTIAN_SYSTEM_PROMPT) - 1)
+            self.user_personality[memory_key] = personality_index
+            print(f"为用户 {memory_key} 分配性格索引: {personality_index}")
+        
+        # 获取用户的性格设定
+        user_personality_data = self.user_personality[memory_key]
+        
+        # 如果是整数，说明是内置性格的索引
+        if isinstance(user_personality_data, int):
+            return XIAOTIAN_SYSTEM_PROMPT[user_personality_data]
+        # 如果是字符串，说明是自定义性格文本
+        elif isinstance(user_personality_data, str):
+            return user_personality_data
+        else:
+            # 兜底：使用第一个内置性格
+            return XIAOTIAN_SYSTEM_PROMPT[0]
+
+    def generate_custom_personality(self, userprompt: str, memory_key: str) -> str:
+        """根据用户需求为特定用户生成自定义性格"""
+        try:
+            generation_prompt = CHANGE_PERSONALITY_PROMPT
+            generation_prompt = generation_prompt.replace("{userprompt}", userprompt)
+            model = USE_MODEL
+
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "user", "content": generation_prompt}
+                ],
+                temperature=0.3
+            )
+
+            generated_personality = BASIC_PROMPT + response.choices[0].message.content.strip() + LAST_PROMOT
+
+            # 直接为该用户设置自定义性格
+            self.user_personality[memory_key] = generated_personality
+            
+            print(f"✨ 成功为用户 {memory_key} 生成专属自定义性格")
+            
+            return generated_personality
+            
+        except Exception as e:
+            print(f"❌ 生成自定义性格失败: {e}")
+            return None
+    
+    def get_personality_info(self, memory_key: str) -> dict:
+        """获取用户当前性格信息"""
+        if memory_key in self.user_personality:
+            user_personality_data = self.user_personality[memory_key]
+            
+            if isinstance(user_personality_data, int):
+                personality_type = "内置性格"
+                personality_index = user_personality_data
+            else:
+                personality_type = "自定义性格"
+                personality_index = -1  # 自定义性格没有索引
+            
+            return {
+                "has_personality": True,
+                "personality_index": personality_index,
+                "personality_type": personality_type,
+                "total_builtin": len(XIAOTIAN_SYSTEM_PROMPT),
+                "is_custom": isinstance(user_personality_data, str)
+            }
+        else:
+            return {
+                "has_personality": False,
+                "total_builtin": len(XIAOTIAN_SYSTEM_PROMPT),
+                "is_custom": False
+            }
+    
+    def reset_user_personality(self, memory_key: str) -> str:
+        """重置用户性格（随机分配新的内置性格）"""
+        if len(XIAOTIAN_SYSTEM_PROMPT) > 0:
+            new_personality_index = random.randint(0, len(XIAOTIAN_SYSTEM_PROMPT) - 1)
+            self.user_personality[memory_key] = new_personality_index
+            self.save_memory(MEMORY_FILE)
+            
+            return f"✨ 已为你重新分配内置性格！新的性格索引：{new_personality_index}"
+        else:
+            return "❌ 没有可用的内置性格配置"
+    
+    def get_user_like_status(self, memory_key: str) -> Dict:
+        """获取用户的like状态，从文件中读取"""
+        if memory_key not in self.user_like_status:
+            self.user_like_status[memory_key] = {
+                'total_like': 0.0,  # 改为浮点数，支持小数
+                'last_change_direction': None,  # 记录上次性格改变的方向：'positive' 或 'negative'
+                'reset_count': 0,  # 连续重置计数
+                'original_personality': None,  # 保存原始性格
+                'notified_thresholds': [],  # 已通知过的阈值列表
+                'speed_multiplier': 1.0,  # 当前like变化速度倍率
+                'personality_change_count': 0  # 性格变化次数
+            }
+        return self.user_like_status[memory_key]
+    
+    def update_user_like(self, memory_key: str, like_change: int):
+        """更新用户的like状态并保存到文件"""
+        status = self.get_user_like_status(memory_key)
+        
+        # 获取当前用户的性格类型，判断是温柔还是锐利
+        personality_multiplier = self._get_personality_like_multiplier(memory_key)
+        
+        # 获取当前速度倍率
+        speed_multiplier = status.get('speed_multiplier', 1.0)
+        
+        # 应用性格倍率和速度倍率到like变化
+        adjusted_like_change = round(like_change * personality_multiplier * speed_multiplier, 2)
+        
+        # 更新总like值（保留两位小数）
+        status['total_like'] = round(status['total_like'] + adjusted_like_change, 2)
+        
+        # 检查是否需要调整性格
+        should_reset = False
+        notification_message = ""
+        
+        # 检查是否达到性格变化阈值
+        if status['total_like'] >= LIKE_PERSONALITY_CHANGE_THRESHOLD and status.get('last_change_direction') == 'natural':
+            # 保存原始性格（如果还没保存过）
+            if status.get('original_personality') is None:
+                status['original_personality'] = self.user_personality.get(memory_key)
+            
+            # 切换到正向增强性格
+            self._adjust_personality_positive(memory_key)
+            status['last_change_direction'] = 'positive'
+            status['total_like'] = 0.0  # 清理like值
+            
+            # 应用速度衰减
+            old_speed = status.get('speed_multiplier', 1.0)
+            new_speed = max(old_speed * (1 - LIKE_SPEED_DECAY_RATE*0.2), LIKE_MIN_SPEED_MULTIPLIER)
+            status['speed_multiplier'] = round(new_speed, 3)
+            status['personality_change_count'] = status.get('personality_change_count', 0) + 1
+            
+            should_reset = True
+            notification_message = f"🎉 你的好感度达到了{LIKE_PERSONALITY_CHANGE_THRESHOLD}～下次性格变化需要达到0（回到原性格）或-{abs(LIKE_RESET_THRESHOLD)}（恶劣性格）哦！\n💫 由于性格变化，好感度增长速度现在是原来的{status['speed_multiplier']:.1%}"
+            
+        elif status['total_like'] <= LIKE_RESET_THRESHOLD and status.get('last_change_direction') == 'natural':
+            # 保存原始性格（如果还没保存过）
+            if status.get('original_personality') is None:
+                status['original_personality'] = self.user_personality.get(memory_key)
+            
+            # 切换到负向恶劣性格
+            self._adjust_personality_negative(memory_key)
+            status['last_change_direction'] = 'negative'
+            status['total_like'] = 0.0  # 清理like值
+            
+            # 应用速度衰减
+            old_speed = status.get('speed_multiplier', 1.0)
+            new_speed = max(old_speed * (1 - LIKE_SPEED_DECAY_RATE*0.2), LIKE_MIN_SPEED_MULTIPLIER)
+            status['speed_multiplier'] = round(new_speed, 3)
+            status['personality_change_count'] = status.get('personality_change_count', 0) + 1
+            
+            should_reset = True
+            notification_message = f"💔 哎呀...好感度降到了{LIKE_RESET_THRESHOLD}，我变得有点暴躁了...想要我变回来的话，需要达到0或者你主动要求哦\n💫 由于性格变化，好感度增长速度现在是原来的{status['speed_multiplier']:.1%}"
+            
+        elif status['total_like'] == 0 and status.get('original_personality') is not None and status.get('last_change_direction') != 'natural':
+            # 回到原始性格
+            self.user_personality[memory_key] = status['original_personality']
+            status['last_change_direction'] = 'natural'
+            status['original_personality'] = None
+            status['speed_multiplier'] = 1.0
+            should_reset = True
+            notification_message = "😌 好感度回到了0，我也恢复成原来的样子啦～"
+        
+        # 检查是否达到新的阈值节点（需要通知用户）
+        current_like = status['total_like']
+        notified_thresholds = status.get('notified_thresholds', [])
+        
+        for threshold in LIKE_THRESHOLDS:
+            # 正向阈值
+            if current_like >= threshold and threshold not in notified_thresholds and current_like >= 5:
+                notified_thresholds.append(threshold)
+                new_speed = LIKE_THRESHOLDS[threshold]  # 直接取固定值
+                status['speed_multiplier'] = new_speed
+                next_threshold = self._get_next_threshold(threshold, True)
+                if next_threshold:
+                    gap = round(next_threshold - current_like, 2)
+                    notification_message += f"\n🎯 已达到好感度{threshold}！距离下一级还差{gap}点～"
+                else:
+                    notification_message += f"\n🏆 恭喜达到好感度{threshold}！你已经是最高等级啦！"
+                break
+
+            # 负向阈值
+            elif current_like <= -threshold and -threshold not in notified_thresholds and current_like <= -5:
+                notified_thresholds.append(-threshold)
+                new_speed = LIKE_THRESHOLDS[threshold]  # 负向也可以用相同速度映射
+                status['speed_multiplier'] = new_speed
+                next_threshold = self._get_next_threshold(-threshold, False)
+                if next_threshold:
+                    gap = round(abs(next_threshold - current_like), 2)
+                    notification_message += f"\n⚠️ 好感度降到了-{threshold}...下一个节点是{next_threshold}，还有{gap}点距离"
+                else:
+                    notification_message += f"\n💥 好感度已经降到了-{threshold}，已经是最低点了..."
+                break
+        
+        status['notified_thresholds'] = notified_thresholds
+        
+        # 保存状态到文件
+        self.save_memory(MEMORY_FILE)
+        
+        return notification_message
+    
+    def _get_next_threshold(self, current_threshold: int, is_positive: bool) -> int:
+        """获取下一个阈值"""
+        if is_positive:
+            # 正向：寻找比当前阈值大的最小值
+            for threshold in sorted(LIKE_THRESHOLDS):
+                if threshold > current_threshold:
+                    return threshold
+        else:
+            # 负向：寻找比当前阈值（绝对值）大的最小值
+            current_abs = abs(current_threshold)
+            for threshold in sorted(LIKE_THRESHOLDS):
+                if threshold > current_abs:
+                    return -threshold
+        return None
+    
+    def get_like_emotion_and_attitude(self, like_value: float) -> tuple:
+        """根据like值获取对应的表情和态度"""
+        for (min_val, max_val), data in LIKE_EMOTIONS.items():
+            if min_val <= like_value < max_val:
+                return data["emoji"], data["attitude"]
+        
+        # 如果没有匹配到，使用默认值
+        if like_value >= 0:
+            return "😊", "友好平和"
+        else:
+            return "😐", "态度平淡"
+    
+    def format_like_display(self, like_value: float) -> str:
+        """格式化like值显示，包含表情"""
+        emoji, attitude = self.get_like_emotion_and_attitude(like_value)
+        return f"{emoji}{like_value:.2f}"
+    
+    def _get_personality_like_multiplier(self, memory_key: str) -> float:
+        user_personality_data = self.user_personality.get(memory_key)
+        
+        # 如果是整数索引（内置性格）
+        if isinstance(user_personality_data, int):
+            if user_personality_data in GENTLE_PERSONALITY_INDICES:
+                return GENTLE_PERSONALITY_LIKE_MULTIPLIER
+            elif user_personality_data in SHARP_PERSONALITY_INDICES:
+                return SHARP_PERSONALITY_LIKE_MULTIPLIER
+            else:
+                return 1.0  # 默认倍率
+        else:
+            # 自定义性格，默认使用中等倍率
+            return 1.0
+    
+    def _adjust_personality_positive(self, memory_key: str):
+        """正向性格调整（温柔增强）"""
+        # 随机选择一个增强温和性格
+        new_personality = random.choice(ENHANCED_GENTLE_PERSONALITIES)
+        # 存储为自定义性格文本
+        self.user_personality[memory_key] = new_personality
+        print(f"已为用户 {memory_key} 调整为增强温和性格")
+    
+    def _adjust_personality_negative(self, memory_key: str):
+        """负向性格调整（锐利增强）"""
+        # 随机选择一个增强锐利性格
+        new_personality = random.choice(ENHANCED_SHARP_PERSONALITIES)
+        # 存储为自定义性格文本
+        self.user_personality[memory_key] = new_personality
+        print(f"已为用户 {memory_key} 调整为增强锐利性格")
+    
+    def reset_user_like_system(self, memory_key: str) -> str:
+        """重置用户的like系统（管理员功能）"""
+        if memory_key in self.user_like_status:
+            # 重置like状态但保留基本结构
+            self.user_like_status[memory_key] = {
+                'total_like': 0.0,
+                'last_change_direction': None,
+                'reset_count': 0,
+                'original_personality': None,
+                'notified_thresholds': [],
+                'speed_multiplier': 1.0,
+                'personality_change_count': 0
+            }
+            # 保存到文件
+            self.save_memory(MEMORY_FILE)
+            return f"✅ 已重置用户 {memory_key} 的like系统"
+        else:
+            return f"⚠️ 用户 {memory_key} 没有like记录"
+    
+    def restore_original_personality(self, memory_key: str) -> str:
+        """恢复用户的原始性格（用户主动要求时调用）"""
+        status = self.get_user_like_status(memory_key)
+        
+        if status.get('original_personality') is not None:
+            # 恢复原始性格
+            self.user_personality[memory_key] = status['original_personality']
+            status['last_change_direction'] = None
+            status['original_personality'] = None
+            status['total_like'] = 0.0  # 重置like值为浮点数
+            
+            # 保存状态
+            self.save_memory(MEMORY_FILE)
+            return "😌 好的，我已经恢复成原来的性格啦～感谢你的包容！"
+        else:
+            return "😊 我现在就是原来的性格哦，没有需要恢复的～"
+    
+    def parse_ai_response_for_like(self, ai_response: str) -> tuple:
+        """解析AI回复中的JSON格式，返回(cleaned_response, like_value, wait_time, not_even_wrong)"""
+        like_value = None
+        wait_time = None
+        not_even_wrong = False
+        content = None
+        if not ai_response:
+            return "", None, None, False
+        # 首先检查是否有完整的JSON格式
+        try:
+            # 尝试解析完整的JSON
+            json_pattern = r'\{.*?\}'
+            json_matches = re.findall(json_pattern, ai_response, re.DOTALL)
+            wait_time = []
+            content = []
+            for json_str in json_matches:
+                try:
+                    data = json.loads(json_str)
+                    
+                    # 提取各个字段
+                    if 'like' in data:
+                        like_value = int(data['like'])
+                    if 'wait_time' in data:
+                        wait_time.append(int(data['wait_time']))
+                    if 'content' in data:
+                        # 使用_strip_md去除markdown格式
+                        cleaned_content = self._strip_md(data['content'])
+                        content.append(cleaned_content)
+                    if 'not_even_wrong' in data:
+                        not_even_wrong = bool(data['not_even_wrong'])
+                except (json.JSONDecodeError, ValueError):
+                    continue
+        except Exception:
+            pass
+        
+        if not content and not wait_time and like_value is None:
+            content_ = self._strip_md(ai_response)
+            return content_, None, None, False
+
+        if like_value is None:
+            like_value = 0
+
+        # 如果有content字段，使用content作为回复内容
+        if content is not None:
+            cleaned_response = content
+        else:
+            # 清理响应中的空白和多余符号
+            cleaned_response = ai_response.strip()
+            cleaned_response = re.sub(r',\s*}', '}', cleaned_response)
+            cleaned_response = re.sub(r'}\s*,\s*$', '}', cleaned_response)
+            cleaned_response = cleaned_response.strip()
+        
+        # 如果标记为not_even_wrong，返回空字符串表示不回复
+        if not_even_wrong:
+            cleaned_response = ""
+        
+        return cleaned_response, like_value, wait_time, not_even_wrong
     
     def get_memory(self, memory_key: str) -> List[Dict[str, str]]:
         """获取指定的记忆"""
@@ -98,6 +485,11 @@ class XiaotianAI:
             
     def get_response(self, user_message: str, user_id: str = None, group_id: str = None, use_tools: bool = False) -> str:
         """获取AI回复，支持按用户/群组分别记忆"""
+        # 检查是否需要重新加载记忆
+        if self._should_reload_memory(MEMORY_FILE):
+            print("🔄 检测到记忆文件更新，重新加载...")
+            self.load_memory(MEMORY_FILE)
+        
         # 检查API调用速率限制
         if not self._check_rate_limit(user_id):
             return "请求过于频繁，请稍后再试~"
@@ -106,31 +498,134 @@ class XiaotianAI:
             # 获取记忆键
             memory_key = self._get_memory_key(user_id, group_id)
             
+            # 获取用户的固定性格
+            user_prompt = self.get_user_personality(memory_key)
+            
+            # 获取用户当前的like状态
+            like_status = self.get_user_like_status(memory_key)
+            current_like = like_status['total_like']
+            
+            # 在系统提示词中添加当前好感度信息
+            emoji, attitude = self.get_like_emotion_and_attitude(current_like)
+            if current_like >= 0:
+                like_info = f"\n\n请以{attitude}的说话方式回复, 说话方式有（友好平和，友好开心，开心愉快，很开心，特别亲近，超级喜欢，非常宠爱，深深喜爱，无比珍视，视为最重要的人，你是我的全世界，超越一切的爱这些），根据现在的好感度调整回复语气，每种方式不会改变回复字数）"
+            else:
+                like_info = f"\n\n请以{attitude}的说话方式回复, 说话方式有（极度愤怒，几乎不想理你，非常生气，态度恶劣，很不高兴，语气冲，不耐烦，敷衍回应，有些厌烦，冷淡疏远，态度平淡，略有不满，有些疑惑，还算友善，友好平和，中性平和这些），根据现在的好感度调整回复语气，每种方式不会改变回复字数）"
+            user_prompt_with_like = user_prompt + like_info
+            if user_id != "system":
             # 构建消息列表
-            messages = [
-                {"role": "system", "content": XIAOTIAN_SYSTEM_PROMPT}
-            ]
-            
-            # 添加对应的记忆
-            messages.extend(self.get_memory(memory_key))
-            
-            # 添加当前用户消息
-            messages.append({"role": "user", "content": user_message})
-            
-            # 调用API
-            model = "moonshot-v1-8k"
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.7  # 提高创造性
-            )
-            
-            ai_response = response.choices[0].message.content
-            ai_response = self._strip_md(ai_response)
-            
+                messages = [
+                    {"role": "system", "content": user_prompt_with_like}
+                ]
+
+                # 添加对应的记忆
+                messages.extend(self.get_memory(memory_key))
+
+                # 添加当前用户消息
+                messages.append({"role": "user", "content": user_message})
+                if use_tools:
+                    # 定义可用的工具
+                    tools = [
+                            {
+                            "type": "function",
+                            "function": {
+                                "name": "create_custom_personality",
+                                "description": "当用户想要改变AI的说话风格、性格特点或表达方式时调用此工具，只要不是明确的希望改变性格，就不要调用此工具。若是，则务必调用此工具，不要自己直接回复。",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "userprompt": {
+                                            "type": "string",
+                                            "description": "用户输入的提示信息，用于生成自定义性格,如果有对应的网络角色，可以在此处提及。",
+                                        }
+                                    },
+                                    "required": ["userprompt"]
+                                }
+                            }
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "restore_original_personality",
+                                "description": "当用户明确要求恢复原来的性格、变回原来的样子、或者表达想要我恢复成初始状态时调用此工具。",
+                                "parameters": {
+                                "type": "object",
+                                    "properties": {},
+                                }
+                            }
+                        }
+                    ]
+
+                    # 调用API，启用工具
+                    model = USE_MODEL
+                    response = self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        tools=tools,
+                        tool_choice="auto",
+                        response_format={"type": "json_object"},
+                        temperature=0.6
+                    )
+
+                    # 检查是否有工具调用
+                    if response.choices[0].message.tool_calls:
+                        tool_call = response.choices[0].message.tool_calls[0]
+                        if tool_call.function.name == "create_custom_personality":
+                            # 解析工具调用参数
+                            params = json.loads(tool_call.function.arguments)
+                            user_request = params.get("user_request", user_message)
+
+                            print(f"🎭 AI决定创建自定义性格，用户需求: {user_request}")
+
+                            # 生成自定义性格
+                            new_personality = self.generate_custom_personality(user_request, memory_key)
+
+                            if new_personality:
+                                # 保存记忆
+                                self.save_memory(MEMORY_FILE)
+                                ai_response = "成功创建了自定义性格"
+                            else:
+                                ai_response = "抱歉，创建自定义性格时遇到了问题，请稍后再试~"
+
+                        elif tool_call.function.name == "restore_original_personality":
+                            print(f"🔄 AI决定恢复用户原始性格")
+
+                            # 恢复原始性格
+                            result = self.restore_original_personality(memory_key)
+                            ai_response = result
+                        else:
+                            ai_response = response.choices[0].message.content
+                    else:
+                        # 没有工具调用，正常回复
+                        ai_response = response.choices[0].message.content
+                else:
+                    # 不使用工具的普通调用
+                    model = USE_MODEL
+                    response = self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=0.6,
+                        response_format={"type": "json_object"}
+                    )
+                    ai_response = response.choices[0].message.content
+            else:
+                model = USE_MODEL
+                messages = [ {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message}]
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.6,
+                    )
+                ai_response = response.choices[0].message.content
+
+
             # 更新对应的记忆
             self.add_to_memory(memory_key, "user", user_message)
             self.add_to_memory(memory_key, "assistant", ai_response)
+            
+            # 每次处理完消息后保存记忆
+            self.save_memory(MEMORY_FILE)
             
             return ai_response
             
@@ -175,21 +670,70 @@ class XiaotianAI:
             return '{}'
     
     def save_memory(self, file_path: str):
-        """保存记忆到文件"""
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(self.memory, f, ensure_ascii=False, indent=2)
+        """保存记忆、用户性格和like状态到文件"""
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # 保存记忆、性格映射和like状态
+            save_data = {
+                'memory_storage': self.memory_storage,
+                'user_personality': self.user_personality,
+                'user_like_status': self.user_like_status
+            }
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(save_data, f, ensure_ascii=False, indent=2)
+                
+            print(f"💾 记忆已保存，包含 {len(self.memory_storage)} 个用户记忆")
+            
+        except Exception as e:
+            print(f"❌ 保存记忆文件失败: {e}")
     
     def load_memory(self, file_path: str):
-        """从文件加载记忆"""
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                self.memory = json.load(f)
+        """从文件加载记忆、用户性格和like状态"""
+        try:
+            if os.path.exists(file_path):
+                # 更新文件修改时间
+                self.memory_file_mtime = os.path.getmtime(file_path)
+                
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    
+                    # 兼容旧版本的内存文件格式
+                    if isinstance(data, dict) and 'memory_storage' in data:
+                        # 新格式
+                        self.memory_storage = data.get('memory_storage', {})
+                        self.user_personality = data.get('user_personality', {})
+                        self.user_like_status = data.get('user_like_status', {})
+                    elif isinstance(data, list):
+                        # 旧格式：直接是memory列表，需要迁移
+                        self.memory_storage = {'default': data}  # 将旧记忆放入默认键
+                        self.user_personality = {}
+                        self.user_like_status = {}
+                    else:
+                        # 其他旧格式
+                        self.memory_storage = data if isinstance(data, dict) else {}
+                        self.user_personality = {}
+                        self.user_like_status = {}
+                        
+                print(f"✅ 成功加载记忆文件，包含 {len(self.memory_storage)} 个用户记忆")
+            else:
+                print(f"📁 记忆文件不存在，将创建新的记忆文件: {file_path}")
+                # 重置文件修改时间
+                self.memory_file_mtime = 0
+                
+        except Exception as e:
+            print(f"❌ 加载记忆文件失败: {e}")
+            # 初始化为空，不影响程序运行
+            self.memory_storage = {}
+            self.user_personality = {}
+            self.user_like_status = {}
+            self.memory_file_mtime = 0
 
 
 
-# 移除可能的markdown格式
-    def _strip_md(t: str) -> str:
+    # 移除可能的markdown格式
+    def _strip_md(self, t: str) -> str:
         if not t:
             return t
         # 移除代码块
@@ -288,10 +832,12 @@ class XiaotianAI:
         # 调用AI进行文本优化
         try:
             print(f"正在优化文本长度：原{current_length}字，目标{target_min}-{target_max}字")
-            model = "moonshot-v1-8k"
+            model = USE_MODEL
             response = self.client.chat.completions.create(
                 model=model,
-                messages=prompt,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
                 temperature=0.3
             )
             optimized_text = response.choices[0].message.content

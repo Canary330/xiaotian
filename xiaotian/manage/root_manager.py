@@ -190,6 +190,20 @@ class RootManager:
         if message == "小天，立即清理":
             return ("CLEANUP_NOW", None)
         
+        # 重置用户like系统
+        if message.startswith("小天，重置like系统："):
+            user_key = message.replace("小天，重置like系统：", "").strip()
+            return ("RESET_LIKE_SYSTEM", user_key)
+        
+        # 查看用户like状态
+        if message.startswith("小天，查看like状态："):
+            user_key = message.replace("小天，查看like状态：", "").strip()
+            return ("CHECK_LIKE_STATUS", user_key)
+        
+        # 重置所有like系统
+        if message == "小天，重置所有like系统":
+            return ("RESET_ALL_LIKE_SYSTEMS", None)
+        
         return None
     
     def _save_image(self, filename: str, image_data: bytes) -> Tuple[str, None]:

@@ -93,8 +93,7 @@ class AstronomyPoster:
                 print("⚠️ 没有设置目标群组，天文海报未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
         else:
             print("⚠️ 没有可用的天文海报")
-    
-        
+
     def _handle_astronomy_poster(self, content: str, user_id: str) -> str:
         """处理天文海报制作请求"""
         try:
@@ -142,7 +141,7 @@ class AstronomyPoster:
             # 检查天文海报模块是否处于等待图片状态
             if not self.waiting_for_images:
                 print("当前不在等待图片状态，忽略此图片")
-                return "您需要先发送天文内容（以\"小天，每日天文做好啦：\"开头），再上传图片"
+                return "您需要先发送天文内容（以\"小天，每日天文做好啦：\"开头），再上传图片；私聊不会识别表情图等内容，请不要随意发送图片"
             
             # 调用天文海报模块处理用户消息和图片
             poster_path, message = self.process_user_message("", [image_path])
@@ -339,7 +338,7 @@ class AstronomyPoster:
                                 
                                 # 如果有AI点评，再发送点评
                                 if self.latest_ai_comment:
-                                    time.sleep(1)  # 再延时1秒
+                                    time.sleep(3)  # 再延时3秒
                                     ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
                                     self.root_manager.settings['qq_send_callback']('private', user_id, ai_comment_message, None)
                                     print(f"已发送超时海报的AI点评给用户 {user_id}")
@@ -363,7 +362,7 @@ class AstronomyPoster:
                                 
                                 # 如果有AI点评，再发送点评
                                 if self.latest_ai_comment:
-                                    time.sleep(1)  # 再延时1秒
+                                    time.sleep(3)  # 再延时3秒
                                     ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
                                     self.root_manager.settings['qq_send_callback']('group', group_id, ai_comment_message, None)
                                     print(f"已发送超时海报的AI点评到群 {group_id}")
