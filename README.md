@@ -3,6 +3,14 @@
 > 一个专业的天文观测助手AI QQ机器人，具备智能对话、定时任务、海报制作、资源管理等完整功能。  
 > A professional astronomical observation assistant AI QQ bot with intelligent dialogue, scheduled tasks, poster creation, resource management and complete functionality.
 
+
+## 现在运行的是小天v3.0 - dnadelion 
+# 新功能：
+1.每位用户在不同群聊拥有不同性格，他们可以是 哈利波特中的赫敏  你的名字中的立花泷 小王子中的小王子 以及冰雪奇缘中的艾莎 美国队长等等，小天一共内置了30余种性格，他们都热爱天文
+2.新增好感度设置，当好感度变化时，小天的态度也会变化，正向变化居多，但总是比负向变化慢。当好感度达到或低于一定值后，小天会更改性格，让其更适合你
+3.现在不需要每句话都呼唤小天啦，在第一次呼唤后的20秒内，你仍可以直接呼叫小天而不使用唤醒词；倘若在这期间有其他人发信息，唤醒时间缩短为5秒
+4.小天回复期间，插话会让他感到很不高兴，因此在每段回复好感度出现以前，小天不会理睬插话者
+
 ## 🚀 快速开始 | Quick Start
 
 ### 1. 环境准备 | Environment Setup
