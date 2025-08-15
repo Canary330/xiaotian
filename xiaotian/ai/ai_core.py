@@ -171,10 +171,27 @@ class XiaotianAI:
         else:
             return "❌ 没有可用的内置性格配置"
     
-    def get_user_like_status(self, memory_key: str) -> Dict:
-        """获取用户的like状态，从文件中读取"""
-        if memory_key not in self.user_like_status:
-            self.user_like_status[memory_key] = {
+    def _extract_user_id_from_memory_key(self, memory_key: str) -> str:
+        """从memory_key中提取纯用户ID"""
+        if memory_key.startswith("group_"):
+            # 格式: group_{group_id}_user_{user_id}
+            parts = memory_key.split("_user_")
+            if len(parts) == 2:
+                return parts[1]
+        elif memory_key.startswith("user_"):
+            # 格式: user_{user_id}
+            return memory_key[5:]  # 去掉"user_"前缀
+        
+        # 如果都不匹配，返回原始key
+        return memory_key
+    
+    def get_user_like_status(self, user_id: str) -> Dict:
+        """获取用户的like状态，从文件中读取（使用纯用户ID，不包含群聊信息）"""
+        # 将memory_key中的用户ID提取出来，用于like状态存储
+        like_key = f"user_{user_id}" if not user_id.startswith("user_") else user_id
+        
+        if like_key not in self.user_like_status:
+            self.user_like_status[like_key] = {
                 'total_like': 0.0,  # 改为浮点数，支持小数
                 'last_change_direction': None,  # 记录上次性格改变的方向：'positive' 或 'negative'
                 'reset_count': 0,  # 连续重置计数
@@ -183,17 +200,23 @@ class XiaotianAI:
                 'speed_multiplier': 1.0,  # 当前like变化速度倍率
                 'personality_change_count': 0  # 性格变化次数
             }
-        return self.user_like_status[memory_key]
+        return self.user_like_status[like_key]
     
     def update_user_like(self, memory_key: str, like_change: int):
         """更新用户的like状态并保存到文件"""
-        status = self.get_user_like_status(memory_key)
+        # 从memory_key中提取用户ID用于like状态
+        user_id = self._extract_user_id_from_memory_key(memory_key)
+        status = self.get_user_like_status(user_id)
         
-        # 获取当前用户的性格类型，判断是温柔还是锐利
+        # 获取当前用户的性格类型，判断是温柔还是锐利（使用完整memory_key）
         personality_multiplier = self._get_personality_like_multiplier(memory_key)
         
         # 获取当前速度倍率
         speed_multiplier = status.get('speed_multiplier', 1.0)
+        
+        # 如果是负值（减少），乘以3倍，使减少永远比增加快
+        if like_change < 0:
+            like_change = like_change * 3
         
         # 应用性格倍率和速度倍率到like变化
         adjusted_like_change = round(like_change * personality_multiplier * speed_multiplier, 2)
@@ -333,10 +356,10 @@ class XiaotianAI:
             elif user_personality_data in SHARP_PERSONALITY_INDICES:
                 return SHARP_PERSONALITY_LIKE_MULTIPLIER
             else:
-                return 1.0  # 默认倍率
+                return 0.5  # 默认倍率
         else:
             # 自定义性格，默认使用中等倍率
-            return 1.0
+            return 0.5
     
     def _adjust_personality_positive(self, memory_key: str):
         """正向性格调整（温柔增强）"""
@@ -354,11 +377,68 @@ class XiaotianAI:
         self.user_personality[memory_key] = new_personality
         print(f"已为用户 {memory_key} 调整为增强锐利性格")
     
+    def find_user_by_partial_id(self, partial_id: str, current_group_id: str = None) -> str:
+        """根据部分用户ID查找完整的用户ID（搜索全局like状态中的用户）"""
+        matches = []
+        
+        # 搜索全局用户like状态中包含该部分ID的项
+        for like_key in self.user_like_status.keys():
+            if like_key.startswith("user_"):
+                user_id = like_key[5:]  # 去掉"user_"前缀
+                if partial_id in user_id:
+                    matches.append(user_id)
+        
+        return matches
+    
+    def transfer_like_value(self, source_memory_key: str, target_partial_id: str, current_group_id: str = None) -> str:
+        """使用自己的like值对冲目标用户的like值"""
+        # 获取源用户ID和like状态
+        source_user_id = self._extract_user_id_from_memory_key(source_memory_key)
+        source_status = self.get_user_like_status(source_user_id)
+        source_like = source_status['total_like']
+        
+        if source_like <= 0:
+            return "❌ 你的like值不足，无法进行对冲操作"
+        
+        # 查找目标用户
+        target_matches = self.find_user_by_partial_id(target_partial_id, current_group_id)
+        
+        if not target_matches:
+            return f"❌ 未找到包含ID '{target_partial_id}' 的用户"
+        elif len(target_matches) > 1:
+            # 如果找到多个匹配，列出让用户选择
+            match_list = '\n'.join([f"- {user_id}" for user_id in target_matches])
+            return f"🔍 找到多个匹配用户，请提供更精确的ID：\n{match_list}"
+        
+        target_user_id = target_matches[0]
+        target_status = self.get_user_like_status(target_user_id)
+        target_like = target_status['total_like']
+        
+        if target_like >= 0:
+            return f"⚠️ 目标用户的like值为{target_like:.2f}，无需对冲（只能对冲负值）"
+        
+        # 计算对冲金额（使用绝对值）
+        offset_amount = min(source_like, abs(target_like))
+        
+        # 执行对冲操作
+        source_status['total_like'] = round(source_like - offset_amount, 2)
+        target_status['total_like'] = round(target_like + offset_amount, 2)
+        
+        # 保存状态
+        self.save_memory(MEMORY_FILE)
+        
+        # 返回结果
+        return f"✅ 对冲成功！\n💰 你的like值：{source_like:.2f} → {source_status['total_like']:.2f}\n🎯 目标用户like值：{target_like:.2f} → {target_status['total_like']:.2f}\n💫 对冲金额：{offset_amount:.2f}"
+    
     def reset_user_like_system(self, memory_key: str) -> str:
         """重置用户的like系统（管理员功能）"""
-        if memory_key in self.user_like_status:
+        # 从memory_key中提取用户ID用于like状态
+        user_id = self._extract_user_id_from_memory_key(memory_key)
+        like_key = f"user_{user_id}"
+        
+        if like_key in self.user_like_status:
             # 重置like状态但保留基本结构
-            self.user_like_status[memory_key] = {
+            self.user_like_status[like_key] = {
                 'total_like': 0.0,
                 'last_change_direction': None,
                 'reset_count': 0,
@@ -369,13 +449,15 @@ class XiaotianAI:
             }
             # 保存到文件
             self.save_memory(MEMORY_FILE)
-            return f"✅ 已重置用户 {memory_key} 的like系统"
+            return f"✅ 已重置用户 {user_id} 的like系统"
         else:
-            return f"⚠️ 用户 {memory_key} 没有like记录"
+            return f"⚠️ 用户 {user_id} 没有like记录"
     
     def restore_original_personality(self, memory_key: str) -> str:
         """恢复用户的原始性格（用户主动要求时调用）"""
-        status = self.get_user_like_status(memory_key)
+        # 从memory_key中提取用户ID用于like状态
+        user_id = self._extract_user_id_from_memory_key(memory_key)
+        status = self.get_user_like_status(user_id)
         
         if status.get('original_personality') is not None:
             # 恢复原始性格
@@ -530,8 +612,9 @@ class XiaotianAI:
             # 获取用户的固定性格
             user_prompt = self.get_user_personality(memory_key)
             
-            # 获取用户当前的like状态
-            like_status = self.get_user_like_status(memory_key)
+            # 获取用户当前的like状态（使用提取的用户ID）
+            extracted_user_id = self._extract_user_id_from_memory_key(memory_key)
+            like_status = self.get_user_like_status(extracted_user_id)
             current_like = like_status['total_like']
             
             # 在系统提示词中添加当前好感度信息

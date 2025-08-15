@@ -118,18 +118,42 @@ class XiaotianScheduler:
                 new_personality = message[7:].strip()
                 if new_personality:
                     # 调用AI的性格更改工具
-                    result = self.ai.change_personality(memory_key, new_personality)
-                    return f"🎭 {result}"
+                    result = self.ai.generate_custom_personality(new_personality, memory_key)
+                    return f'{{"wait_time": 3, "content": "🎭 {result}"}}'
                 else:
-                    return "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"
+                    return '{"wait_time": 3, "content": "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"}'
             else:
-                return "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"
+                return '{"wait_time": 3, "content": "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"}'
         
         # 检查回到最初性格命令
         elif message.strip() == "小天，回到最初的性格":
             # 调用AI的恢复性格工具
-            result = self.ai.restore_personality(memory_key)
-            return f"🔄 {result}"
+            result = self.ai.restore_original_personality(memory_key)
+            return f'{{"wait_time": 3, "content": "🔄 {result}"}}'
+        
+        # 检查减少like值命令
+        elif message.startswith("小天，我想减少") and "的like值" in message:
+            # 提取目标用户ID
+            try:
+                # 匹配"小天，我想减少（userid）的like值"或"小天，我想减少 userid 的like值"
+                import re
+                match = re.search(r'小天，我想减少[（(]?([^）)]*)[）)]?的like值', message)
+                if not match:
+                    match = re.search(r'小天，我想减少\s+([^\s]+)\s+的like值', message)
+                
+                if match:
+                    target_partial_id = match.group(1).strip()
+                    if target_partial_id:
+                        # 调用AI的like值转移功能
+                        result = self.ai.transfer_like_value(memory_key, target_partial_id, group_id)
+                        return f'{{"wait_time": 3, "content": "{result}"}}'
+                    else:
+                        return '{"wait_time": 3, "content": "❌ 请提供要减少like值的用户ID"}'
+                else:
+                    return '{"wait_time": 3, "content": "❌ 命令格式错误，请使用：小天，我想减少（userid）的like值"}'
+            except Exception as e:
+                print(f"处理减少like值命令时发生错误: {e}")
+                return '{"wait_time": 3, "content": "❌ 处理命令时发生错误，请稍后重试"}'
         
         return None
         
@@ -220,7 +244,7 @@ class XiaotianScheduler:
                     elif command == "RESET_LIKE_SYSTEM":
                         # 重置指定用户的like系统
                         result = self.ai.reset_user_like_system(data)
-                        return result
+                        return f'{{"wait_time": 3, "content": "{result}"}}'
                     elif command == "CHECK_LIKE_STATUS":
                         # 查看指定用户的like状态
                         status = self.ai.get_user_like_status(data)
@@ -262,22 +286,23 @@ class XiaotianScheduler:
 � 性格变化次数：{status.get('personality_change_count', 0)}次
 🎯 {next_info if next_info else "已达到最高/最低级别"}
 📝 已通知阈值：{len(status.get('notified_thresholds', []))}个"""
-                        return status_text
+                        return f'{{"wait_time": 3, "content": "{status_text}"}}'
                     elif command == "RESET_ALL_LIKE_SYSTEMS":
                         # 重置所有用户的like系统
                         count = 0
                         for memory_key in list(self.ai.user_like_status.keys()):
                             self.ai.reset_user_like_system(memory_key)
                             count += 1
-                        return f"✅ 已重置 {count} 个用户的like系统"
+                        return f'{{"wait_time": 3, "content": "✅ 已重置 {count} 个用户的like系统"}}'
                     else:
                         # 返回普通Root命令结果
-                        return command
+                        return f'{{"wait_time": 3, "content": "{command}"}}'
             else:
                 # 私聊中处理特殊指令 - 天文海报
                 if message.startswith("小天，每日天文做好啦："):
                     # 否则就是普通天文内容处理
-                    return self.astronomy._handle_astronomy_poster(message, user_id)
+                    result = self.astronomy._handle_astronomy_poster(message, user_id)
+                    return f'{{"wait_time": 3, "content": "{result}"}}'
 
                 # 检查是否是给天文海报添加图片的消息
                 if self.astronomy.waiting_for_images:
@@ -304,7 +329,8 @@ class XiaotianScheduler:
                                     print(f"已下载并保存用户图片到: {image_path}")
                                     
                                     # 处理用户消息和图片
-                                    return self.astronomy._handle_astronomy_image(user_id, image_path)
+                                    result = self.astronomy._handle_astronomy_image(user_id, image_path)
+                                    return f'{{"wait_time": 3, "content": "{result}"}}'
                                 else:
                                     print(f"图片下载失败，状态码: {response.status_code}")
                             except Exception as e:
@@ -332,9 +358,9 @@ class XiaotianScheduler:
                                 except Exception as send_err:
                                     print(f"向用户发送立即生成的天文海报失败: {send_err}")
 
-                            return f"🎨 海报制作成功！\n{response_message}"
+                            return f'{{"wait_time": 3, "content": "🎨 海报制作成功！\\n{response_message}"}}'
                         else:
-                            return f"⚠️ {response_message}"
+                            return f'{{"wait_time": 3, "content": "⚠️ {response_message}"}}'
                     
                     # 处理常规图片数据
                     elif image_data:
@@ -347,7 +373,8 @@ class XiaotianScheduler:
                             print(f"已保存用户图片到: {image_path}")
                             
                             # 处理用户消息和图片
-                            return self.astronomy._handle_astronomy_image(user_id, image_path)
+                            result = self.astronomy._handle_astronomy_image(user_id, image_path)
+                            return f'{{"wait_time": 3, "content": "{result}"}}'
                         except Exception as e:
                             print(f"处理用户图片失败: {e}")
                 
@@ -361,7 +388,7 @@ class XiaotianScheduler:
                         root_result = self.root_manager.process_root_command(user_id, message, None, image_data)
                         if root_result:
                             command, data = root_result
-                            return command
+                            return f'{{"wait_time": 3, "content": "{command}"}}'
                     
                     # 如果不是root命令，或者不是root用户，则当作普通聊天
                     for trigger in TRIGGER_WORDS:
@@ -380,7 +407,7 @@ class XiaotianScheduler:
                         return response
                 
                 # 非root用户私聊需要唤醒词
-                return ""
+                return '{"wait_time": 0, "content": ""}'
         else:
             """处理普通聊天消息"""
         
@@ -461,7 +488,7 @@ class XiaotianScheduler:
             self.waiting_time = 5
             print(f"其他用户 {user_id} 在群 {group_id} 发消息，缩短超时时间到 {self.waiting_time}秒")
             
-        return ""  # 未触发时返回空字符串
+        return '{"wait_time": 0, "content": ""}'  # 未触发时返回空字符串
 
     def daily_cleanup_task(self):
         """每日数据清理任务"""
