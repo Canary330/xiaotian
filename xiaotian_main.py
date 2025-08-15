@@ -129,19 +129,19 @@ class XiaotianQQBot:
         
         # 注册群聊消息处理
         self.bot.add_group_event_handler(self.on_group_message)
-        self.bot.add_group_event_handler(self.handle_wakeup_)
         # 注册请求处理（好友申请和群邀请）
         self.bot.add_request_event_handler(self.on_request)
     
     def handle_response(self, response:str, user_id: str, group_id: str = None) -> tuple:
-        # 解析AI回复中的JSON信息并处理
+        # 尝试解析AI回复中的JSON信息并处理
+        try:
             memory_key = self.ai._get_memory_key(user_id, group_id)
             cleaned_response, like_value, wait_time, not_even_wrong = self.ai.parse_ai_response_for_like(response)
             
             # 如果标记为not_even_wrong，不进行回复
             if not_even_wrong:
                 print(f"🚫 用户 {memory_key} 的消息被标记为not_even_wrong，不进行回复")
-                return "","",""
+                return [], [], ""
             
             if like_value:
                 notification_message = ""
@@ -150,13 +150,19 @@ class XiaotianQQBot:
                 like_status = self.ai.get_user_like_status(memory_key)
                 like_display = self.ai.format_like_display(like_status['total_like'])
                 # 组合最终回复：原回复 + like显示 + 可能的通知消息
-                like_response = f"{like_display}"
+                like_response = "好感度："
+                like_response += f"{like_display}"
                 if notification_message:
                     like_response += f"{notification_message}"
             else:
                 like_response = ""
             # 返回最终回复
             return wait_time, cleaned_response, like_response
+        except Exception as e:
+            # 如果解析失败，说明这是一个普通的文本回复（比如root命令结果）
+            # 直接返回文本，不处理like值
+            self._log.debug(f"解析AI响应失败，当作普通文本处理: {e}")
+            return [3], [response], ""  # 返回固定等待时间和原始响应
 
     async def on_private_message(self, msg: PrivateMessage):
         """处理私聊消息"""
@@ -211,15 +217,42 @@ class XiaotianQQBot:
                                     
                 # 处理消息（私聊不传group_id）
                 response = self.scheduler.process_message(user_id, msg.raw_message, None, image_data)
-                wait_time, cleaned_response, like_response = self.handle_response(response, user_id)
+                self._log.info(f"Scheduler返回响应: '{response}' (类型: {type(response)}, 长度: {len(str(response)) if response else 0})")
                 
-                for i in range(len(wait_time)):
-                    if cleaned_response[i]:
-                        await asyncio.sleep(wait_time[i] + random.uniform(0, 3))
-                        await msg.reply(text=cleaned_response[i])
-                if like_response:
-                    await asyncio.sleep(3 + random.uniform(-1, 2))
-                    await msg.reply(text=like_response)
+                # 检查是否有回复
+                if response:  # 如果有回复内容
+                    self._log.info(f"开始处理响应...")
+                    wait_time, cleaned_response, like_response = self.handle_response(response, user_id)
+                    self._log.info(f"Handle_response返回 - wait_time: {wait_time}, cleaned_response: {cleaned_response}, like_response: '{like_response}'")
+                    
+                    # 检查返回值是否有效
+                    if wait_time and cleaned_response:
+                        self._log.info(f"发送多条消息，共{len(cleaned_response)}条")
+                        for i in range(len(wait_time)):
+                            if cleaned_response[i]:
+                                sleep_time = wait_time[i] + random.uniform(0, 3)
+                                self.scheduler.add_response_wait_time(sleep_time)
+                                await asyncio.sleep(sleep_time)
+                                await msg.reply(text=cleaned_response[i])
+                                self._log.info(f"已发送第{i+1}条消息: {cleaned_response[i][:50]}...")
+                    elif cleaned_response:
+                        # 如果只有cleaned_response，没有wait_time
+                        self._log.info(f"发送单条消息: {cleaned_response}")
+                        sleep_time = 3 + random.uniform(0, 1)
+                        self.scheduler.add_response_wait_time(sleep_time)
+                        await asyncio.sleep(sleep_time)
+                        await msg.reply(text=cleaned_response)
+                        self._log.info(f"已发送消息")
+                        
+                    if like_response:
+                        self._log.info(f"发送like响应: {like_response}")
+                        sleep_time = 3 + random.uniform(-1, 2)
+                        self.scheduler.add_response_wait_time(sleep_time)
+                        await asyncio.sleep(sleep_time)
+                        await msg.reply(text=like_response)
+                        self._log.info(f"已发送like响应")
+                else:
+                    self._log.info(f"响应为空，不发送消息")
                     
             finally:
                 # 标记回复结束
@@ -268,20 +301,31 @@ class XiaotianQQBot:
                     for i in range(len(wait_time)):
                         if cleaned_response[i]:
                             if i != 0:
-                                await asyncio.sleep(wait_time[i] + random.uniform(0, 1))
+                                sleep_time = wait_time[i] + random.uniform(0, 1)
+                                # 将等待时间累加到scheduler中，用于唤醒超时计算
+                                self.scheduler.add_response_wait_time(sleep_time)
+                                await asyncio.sleep(sleep_time)
+                            else:
+                                sleep_time = 1
+                                self.scheduler.add_response_wait_time(sleep_time)
+                                await asyncio.sleep(sleep_time)
                             # 检查是否有其他用户请求，如果没有则不使用引用
                             if len(self.replying_users) <= 1:  # 只有当前用户在回复队列中
                                 await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response[i])
                             else:
                                 await msg.reply(text=cleaned_response[i])
                     if like_response:
-                        await asyncio.sleep(1 + random.uniform(-1, 1))
+                        sleep_time = 1 + random.uniform(0, 2)
+                        self.scheduler.add_response_wait_time(sleep_time)
+                        await asyncio.sleep(sleep_time)
                         if len(self.replying_users) <= 1:
                             await self.bot.api.post_group_msg(group_id=int(group_id), text=like_response)
                         else:
                             await msg.reply(text=like_response)
                 elif cleaned_response:
-                    await asyncio.sleep(3 + random.uniform(0, 1))
+                    sleep_time = 3 + random.uniform(0, 1)
+                    self.scheduler.add_response_wait_time(sleep_time)
+                    await asyncio.sleep(sleep_time)
                     if len(self.replying_users) <= 1:
                         await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response)
                     else:
@@ -293,54 +337,6 @@ class XiaotianQQBot:
             finally:
                 # 标记回复结束
                 self.replying_users.discard(user_key)
-
-
-    async def handle_wakeup_(self, msg: GroupMessage):
-        """处理唤醒状态中的消息"""
-        user_id = str(msg.user_id)
-        group_id = str(msg.group_id)
-        user_key = f"{user_id}_{group_id}"  # 群聊中的用户唯一标识
-        
-        # 检查该用户是否正在被回复
-        if user_key in self.replying_users:
-            self._log.info(f"用户 {msg.user_id} 在群 {msg.group_id} 正在被回复中，handle_wakeup_跳过处理")
-            return
-            
-        if self.scheduler.wait_for_wakeup:
-            # 获取用户回复锁
-            if user_key not in self.reply_locks:
-                self.reply_locks[user_key] = asyncio.Lock()
-            
-            async with self.reply_locks[user_key]:
-                # 标记开始回复
-                self.replying_users.add(user_key)
-                
-                try:
-                    last_wakeup_time = time.time()
-                    self.scheduler.waiting_time = 10
-                    while time.time() - last_wakeup_time < self.scheduler.waiting_time:
-                        use_tools = str(msg.group_id) is not None
-                        response = self.scheduler.ai.get_response(msg.raw_message, user_id=str(msg.user_id), group_id=str(msg.group_id), use_tools=use_tools)
-                        wait_time, cleaned_response, like_response = self.handle_response(response, str(msg.user_id), str(msg.group_id))
-                        if wait_time and cleaned_response:
-                            for i in range(len(wait_time)):
-                                if cleaned_response[i]:
-                                    time_sleep = wait_time[i] + random.uniform(0, 3)
-                                    self.scheduler.waiting_time += time_sleep
-                                    await asyncio.sleep(time_sleep)
-                                    await msg.reply(text=cleaned_response[i])
-                            if like_response:
-                                await asyncio.sleep(3 + random.uniform(-1, 2))
-                                await msg.reply(text=like_response)
-                        elif cleaned_response:
-                            await asyncio.sleep(4 + random.uniform(0, 3))
-                            await msg.reply(text=cleaned_response)
-                        time.sleep(0.2)
-                    self.scheduler.wait_for_wakeup = False
-                    
-                finally:
-                    # 标记回复结束
-                    self.replying_users.discard(user_key)
 
 
     async def on_request(self, request: Request):

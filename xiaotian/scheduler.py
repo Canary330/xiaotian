@@ -5,7 +5,7 @@
 
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime as dt, timedelta
 from threading import Thread
 from typing import List, Callable, Tuple, Optional, Any, Dict
 import time
@@ -14,7 +14,8 @@ import tempfile
 
 from .manage.config import (
     DAILY_WEATHER_TIME, TRIGGER_WORDS,
-    DAILY_ASTRONOMY_TIME, MONTHLY_ASTRONOMY_TIME, CLEANUP_TIME
+    DAILY_ASTRONOMY_TIME, MONTHLY_ASTRONOMY_TIME, CLEANUP_TIME,
+    DAILY_ASTRONOMY_MESSAGE
 )
 from .ai.ai_core import XiaotianAI
 
@@ -43,7 +44,7 @@ class SimpleScheduler:
     
     def run_pending(self):
         """检查并执行待运行的任务"""
-        now = datetime.now()
+        now = dt.now()
         for task in self.tasks:
             if task['type'] == 'daily':
                 task_time = now.replace(hour=task['hour'], minute=task['minute'], second=0, microsecond=0)
@@ -53,10 +54,15 @@ class SimpleScheduler:
                     (task['last_run'] is None or task['last_run'].date() < now.date()) and
                     task.get('initialized', False)):  # 防止启动时立即执行
                     try:
+                        task_name = task['func'].__name__
+                        print(f"⏰ {now.strftime('%H:%M:%S')} - 执行定时任务: {task_name}")
                         task['func']()
                         task['last_run'] = now
+                        print(f"✅ {now.strftime('%H:%M:%S')} - 定时任务完成: {task_name}")
                     except Exception as e:
                         print(f"❌ 定时任务执行失败：{e}")
+                        import traceback
+                        print(traceback.format_exc())
                 
                 # 标记任务已初始化
                 if not task.get('initialized', False):
@@ -71,6 +77,10 @@ class XiaotianScheduler:
         # 先初始化 RootManager，因为其他组件依赖它
         self.root_manager = RootManager(root_id=root_id)
         
+        # 设置AI实例到RootManager
+        if ai:
+            self.root_manager.set_ai_instance(ai)
+        
         # 然后初始化需要 RootManager 的组件
         self.weather_tools = WeatherTools(root_manager=self.root_manager)
         self.scheduler = SimpleScheduler()
@@ -79,7 +89,8 @@ class XiaotianScheduler:
         self.astronomy = AstronomyPoster(root_manager=self.root_manager)
         self.wait_for_wakeup = False
         self.wakeup_time = 0  # 唤醒时间戳
-        self.waiting_time = 10  # 默认唤醒超时时间（10秒）
+        self.waiting_time = 20  # 默认唤醒超时时间（20秒）
+        self.ai_response_time = 0  # AI回复等待时间累计
         self.last_user_id: str = None  # 最后一个用户ID
         self.last_group_id: str = None  # 最后一个群组ID
 
@@ -89,6 +100,38 @@ class XiaotianScheduler:
         self.message_sender = MessageSender(self.root_manager, self.ai)
         
         self.is_running = False
+        
+    def add_response_wait_time(self, wait_seconds: float):
+        """累加回复等待时间，用于唤醒状态超时计算"""
+        if self.wait_for_wakeup:
+            self.ai_response_time += wait_seconds
+            print(f"⏱️ 累加等待时间: {wait_seconds:.2f}秒，总计: {self.ai_response_time:.2f}秒")
+        
+    def _check_special_user_commands(self, user_id: str, message: str, group_id: str = None) -> Optional[str]:
+        """检查用户特殊提示词命令"""
+        memory_key = self.ai._get_memory_key(user_id, group_id)
+        
+        # 检查更改性格命令
+        if message.startswith("小天，更改性格"):
+            # 提取新性格描述
+            if len(message) > 7:  # "小天，更改性格" 长度为7
+                new_personality = message[7:].strip()
+                if new_personality:
+                    # 调用AI的性格更改工具
+                    result = self.ai.change_personality(memory_key, new_personality)
+                    return f"🎭 {result}"
+                else:
+                    return "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"
+            else:
+                return "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"
+        
+        # 检查回到最初性格命令
+        elif message.strip() == "小天，回到最初的性格":
+            # 调用AI的恢复性格工具
+            result = self.ai.restore_personality(memory_key)
+            return f"🔄 {result}"
+        
+        return None
         
         
     def start_scheduler(self):
@@ -131,9 +174,15 @@ class XiaotianScheduler:
         
         # 检查唤醒状态是否超时
         current_time = time.time()
-        if self.wait_for_wakeup and (current_time - self.wakeup_time) > self.waiting_time:
+        if self.wait_for_wakeup and (current_time - self.wakeup_time - self.ai_response_time) > self.waiting_time:
             self.wait_for_wakeup = False
+            self.ai_response_time = 0  # 重置AI回复时间累计
             print(f"唤醒状态超时，已自动关闭")
+        
+        # 检查用户特殊提示词
+        special_command_result = self._check_special_user_commands(user_id, message, group_id)
+        if special_command_result:
+            return special_command_result
             
         # 快速路径：检查是否是唤醒状态中的同一用户
         is_wakeup_continue = (self.wait_for_wakeup and 
@@ -302,10 +351,19 @@ class XiaotianScheduler:
                         except Exception as e:
                             print(f"处理用户图片失败: {e}")
                 
-                # 初始化content变量
+                # root用户私聊正常聊天功能 - 但优先检查是否是root命令
                 is_triggered = any(message.startswith(trigger) for trigger in TRIGGER_WORDS)
                 
                 if is_triggered:
+                    # 先检查这是否是一个root命令
+                    if self.root_manager.is_root(user_id):
+                        # 对于root用户，再次尝试处理命令
+                        root_result = self.root_manager.process_root_command(user_id, message, None, image_data)
+                        if root_result:
+                            command, data = root_result
+                            return command
+                    
+                    # 如果不是root命令，或者不是root用户，则当作普通聊天
                     for trigger in TRIGGER_WORDS:
                         if message.startswith(trigger):
                             parts = message.split(trigger, 1)
@@ -315,9 +373,14 @@ class XiaotianScheduler:
                             else:
                                 content = parts[1].strip()
                                 break
-                    response = self.ai.get_response(content, user_id=user_id, group_id=None)
-                    return response
-                return
+                    
+                    # 只有root用户可以私聊
+                    if self.root_manager.is_root(user_id):
+                        response = self.ai.get_response(content, user_id=user_id, group_id=None)
+                        return response
+                
+                # 非root用户私聊需要唤醒词
+                return ""
         else:
             """处理普通聊天消息"""
         
@@ -355,14 +418,16 @@ class XiaotianScheduler:
                 # 设置唤醒状态，持续一段时间
                 self.wait_for_wakeup = True
                 self.wakeup_time = time.time()  # 记录唤醒时间
-                self.waiting_time = 10  # 重置为默认10秒
+                self.ai_response_time = 0  # 重置AI回复时间累计
+                self.waiting_time = 25  # 重置为25秒
                 print(f"用户 {user_id} 唤醒了小天，超时时间: {self.waiting_time}秒")
             elif is_wakeup_continue:
                 # 唤醒状态中的后续对话
                 if self.last_user_id == user_id and self.last_group_id == group_id:
                     # 同一用户继续发消息，重新计时
                     self.wakeup_time = time.time()
-                    self.waiting_time = 10  # 重置为10秒
+                    self.ai_response_time = 0  # 重置AI回复时间累计
+                    self.waiting_time = 15  # 重置为15秒
                     print(f"用户 {user_id} 继续对话，重新计时: {self.waiting_time}秒")
 
             # 如果是自动触发，生成合适的回复
@@ -379,7 +444,17 @@ class XiaotianScheduler:
             # AI对话，传入群组信息以支持分别记忆
             # 在群聊中允许使用工具，在私聊中只能聊天
             use_tools = group_id is not None
+            
+            # 记录AI响应开始时间
+            ai_start_time = time.time()
             response = self.ai.get_response(content, user_id=user_id, group_id=group_id, use_tools=use_tools)
+            ai_end_time = time.time()
+            
+            # 累计AI回复等待时间
+            ai_duration = ai_end_time - ai_start_time
+            self.ai_response_time += ai_duration
+            print(f"AI回复耗时: {ai_duration:.2f}秒，累计: {self.ai_response_time:.2f}秒")
+            
             return response
         elif self.wait_for_wakeup and self.last_group_id == group_id and self.last_user_id != user_id:
             # 在唤醒状态中，其他用户发消息，缩短超时时间到5秒
@@ -390,7 +465,7 @@ class XiaotianScheduler:
 
     def daily_cleanup_task(self):
         """每日数据清理任务"""
-        print(f"🧹 {datetime.now().strftime('%H:%M')} - 执行每日数据清理任务")
+        print(f"🧹 {dt.now().strftime('%H:%M')} - 执行每日数据清理任务")
         
         try:
             # 清理旧的天文海报数据

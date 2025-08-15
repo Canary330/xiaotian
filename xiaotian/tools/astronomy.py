@@ -6,7 +6,7 @@
 import os
 import re
 import calendar
-import datetime
+from datetime import datetime as dt, timedelta
 import time
 from typing import Tuple, List, Dict, Optional, Union
 import textwrap
@@ -60,7 +60,7 @@ class AstronomyPoster:
         if not self.root_manager.is_feature_enabled('daily_astronomy'):
             return
             
-        print(f"🔭 {datetime.now().strftime('%H:%M')} - 执行每日天文海报任务")
+        print(f"🔭 {dt.now().strftime('%H:%M')} - 执行每日天文海报任务")
         
         if self.last_astronomy_post:
             # 如果有上次处理的天文海报，使用它
@@ -191,10 +191,10 @@ class AstronomyPoster:
             return
             
         # 只在每月1号执行
-        if datetime.now().day != 1:
+        if dt.now().day != 1:
             return
             
-        print(f"📚 {datetime.now().strftime('%H:%M')} - 执行月度天文海报合集任务")
+        print(f"📚 {dt.now().strftime('%H:%M')} - 执行月度天文海报合集任务")
         
         try:
             collection_path = self.create_monthly_collection()
@@ -448,7 +448,7 @@ class AstronomyPoster:
             text: 海报文字内容
             user_images: 用户提供的图片路径列表，最多两张
         """
-        today = datetime.datetime.now()
+        today = dt.now()
         month = today.month
         date_str = today.strftime("%Y年%m月%d日")
         
@@ -743,9 +743,9 @@ class AstronomyPoster:
         
     def create_monthly_collection(self) -> Optional[str]:
         """创建上个月所有天文海报的合集"""
-        today = datetime.datetime.now()
-        first_day = datetime.datetime(today.year, today.month, 1)
-        last_month = (first_day - datetime.timedelta(days=1))
+        today = dt.now()
+        first_day = dt(today.year, today.month, 1)
+        last_month = (first_day - timedelta(days=1))
         year_month = last_month.strftime("%Y%m")
         
         # 获取上个月的所有海报
@@ -787,14 +787,14 @@ class AstronomyPoster:
         
     def cleanup_old_data(self, days_to_keep: int = 30) -> None:
         """清理旧的海报数据，仅保留最近几天的文件"""
-        cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days_to_keep)
+        cutoff_date = dt.now() - timedelta(days=days_to_keep)
         
         # 清理单个海报文件
         for file in os.listdir(self.output_path):
             if file.startswith("astronomy_"):
                 try:
                     file_date_str = file.replace("astronomy_", "").replace(".png", "")
-                    file_date = datetime.datetime.strptime(file_date_str, "%Y%m%d")
+                    file_date = dt.strptime(file_date_str, "%Y%m%d")
                     
                     if file_date < cutoff_date:
                         os.remove(os.path.join(self.output_path, file))

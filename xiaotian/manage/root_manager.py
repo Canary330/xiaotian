@@ -19,6 +19,9 @@ class RootManager:
         self.settings_file = ROOT_ADMIN_DATA_FILE
         self.load_settings()
         
+        # AI实例（运行时设置）
+        self.ai = None
+        
         # 等待图片的用户命令
         self.pending_operations = {}  # user_id: {"type": "image", "name": "filename"}
 
@@ -90,6 +93,10 @@ class RootManager:
         """设置QQ消息发送回调函数"""
         self.settings['qq_send_callback'] = callback
     
+    def set_ai_instance(self, ai):
+        """设置AI实例"""
+        self.ai = ai
+    
     def process_root_command(self, user_id: str, message: str, group_id: str = None, image_data: bytes = None) -> Optional[Tuple[str, Any]]:
         """处理Root命令"""
         if not self.is_root(user_id):
@@ -149,6 +156,15 @@ class RootManager:
         if message.startswith("小天，设置天气城市："):
             city = message.replace("小天，设置天气城市：", "").strip()
             return self._set_weather_city(city)
+        
+        # 更换模型
+        if message.startswith("小天，更换模型"):
+            # 提取模型参数
+            model_param = message.replace("小天，更换模型", "").strip()
+            if model_param.startswith("：") or model_param.startswith(":"):
+                model_param = model_param[1:].strip()
+            
+            return self._change_model(model_param)
         
         # 清理输出文件
         if message == "小天，清理输出":
@@ -388,6 +404,65 @@ class RootManager:
     def is_feature_enabled(self, feature: str) -> bool:
         """检查功能是否启用"""
         return self.settings['enabled_features'].get(feature, True)
+    
+    def _change_model(self, model_param: str) -> Tuple[str, Any]:
+        """更换AI模型"""
+        # 模型映射表
+        model_mapping = {
+            'k2': 'kimi-k2-0711-preview',
+            'k1': 'moonshot-v1-8k',
+            'kimi': 'kimi-k2-0711-preview',
+            'moonshot': 'moonshot-v1-8k',
+            'v1-8k': 'moonshot-v1-8k',
+            'v1-32k': 'moonshot-v1-32k',
+            'v1-128k': 'moonshot-v1-128k'
+        }
+        
+        if not model_param:
+            # 显示当前模型和可用选项
+            current_model = self.ai.current_model if self.ai else "未知"
+            available_models = ', '.join([f"{k}({v})" for k, v in model_mapping.items()])
+            return (f"📋 当前模型: {current_model}\n\n可用快捷指令:\n{available_models}\n\n或直接输入完整模型名", None)
+        
+        if not self.ai:
+            return ("❌ AI实例未初始化，无法更换模型", None)
+        
+        # 检查是否是快捷指令
+        if model_param.lower() in model_mapping:
+            target_model = model_mapping[model_param.lower()]
+            model_name = model_param.lower()
+        else:
+            # 直接使用输入的模型名
+            target_model = model_param
+            model_name = model_param
+        
+        try:
+            # 使用AI实例的动态更换功能
+            result = self.ai.change_model(target_model)
+            
+            # 同时更新配置文件以便下次重启时生效
+            config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # 查找并替换USE_MODEL行
+            import re
+            pattern = r'USE_MODEL\s*=\s*["\'][^"\']*["\']'
+            new_line = f'USE_MODEL = "{target_model}"'
+            
+            if re.search(pattern, content):
+                new_content = re.sub(pattern, new_line, content)
+                
+                # 写回文件
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                
+                return (f"🚀 {result}\n快捷指令: {model_name}\n📝 配置文件已同步更新", None)
+            else:
+                return (f"🚀 {result}\n快捷指令: {model_name}\n⚠️ 配置文件更新失败，但当前会话已生效", None)
+                
+        except Exception as e:
+            return (f"❌ 更换模型失败: {str(e)}", None)
     
     def get_weather_city(self) -> str:
         """获取天气城市"""

@@ -44,6 +44,15 @@ class XiaotianAI:
         # 初始化时加载记忆
         self.load_memory(MEMORY_FILE)
         
+        # 当前使用的模型（动态可变）
+        self.current_model = USE_MODEL
+        
+    def change_model(self, new_model: str) -> str:
+        """动态更换AI模型"""
+        old_model = self.current_model
+        self.current_model = new_model
+        return f"✅ 模型已从 {old_model} 更换为 {new_model}"
+        
     def _should_reload_memory(self, file_path: str) -> bool:
         """检查是否需要重新加载记忆文件"""
         try:
@@ -102,7 +111,7 @@ class XiaotianAI:
         try:
             generation_prompt = CHANGE_PERSONALITY_PROMPT
             generation_prompt = generation_prompt.replace("{userprompt}", userprompt)
-            model = USE_MODEL
+            model = self.current_model
 
             response = self.client.chat.completions.create(
                 model=model,
@@ -577,7 +586,7 @@ class XiaotianAI:
                     ]
 
                     # 调用API，启用工具
-                    model = USE_MODEL
+                    model = self.current_model
                     response = self.client.chat.completions.create(
                         model=model,
                         messages=messages,
@@ -620,7 +629,7 @@ class XiaotianAI:
                         ai_response = response.choices[0].message.content
                 else:
                     # 不使用工具的普通调用
-                    model = USE_MODEL
+                    model = self.current_model
                     response = self.client.chat.completions.create(
                         model=model,
                         messages=messages,
@@ -629,8 +638,8 @@ class XiaotianAI:
                     )
                     ai_response = response.choices[0].message.content
             else:
-                model = USE_MODEL
-                messages = [ {"role": "system", "content": SYSTEM_PROMPT},
+                model = "moonshot-v1-8k"
+                messages = [ {"role": "system", "content": SYSTEM_PROMPT[0]},
                     {"role": "user", "content": user_message}]
                 response = self.client.chat.completions.create(
                     model=model,
@@ -852,7 +861,7 @@ class XiaotianAI:
         # 调用AI进行文本优化
         try:
             print(f"正在优化文本长度：原{current_length}字，目标{target_min}-{target_max}字")
-            model = USE_MODEL
+            model = self.current_model
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
