@@ -146,8 +146,9 @@ class XiaotianQQBot:
             if like_value:
                 notification_message = ""
                 notification_message = self.ai.update_user_like(memory_key, like_value)
-                # 获取当前like状态并添加表情显示
-                like_status = self.ai.get_user_like_status(memory_key)
+                # 获取当前like状态并添加表情显示 - 使用统一的用户ID
+                user_id_for_like = self.ai._extract_user_id_from_memory_key(memory_key)
+                like_status = self.ai.get_user_like_status(user_id_for_like)
                 like_display = self.ai.format_like_display(like_status['total_like'])
                 # 组合最终回复：原回复 + like显示 + 可能的通知消息
                 like_response = "好感度："

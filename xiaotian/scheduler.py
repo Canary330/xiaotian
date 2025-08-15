@@ -113,13 +113,20 @@ class XiaotianScheduler:
         
         # 检查更改性格命令
         if message.startswith("小天，更改性格"):
+            # 检查用户like值是否达到条件
+            user_like_status = self.ai.get_user_like_status(self.ai._extract_user_id_from_memory_key(memory_key))
+            current_like = user_like_status['total_like']
+            
+            if abs(current_like) < 150:
+                return f'{{"wait_time": 3, "content": "❌ 更改性格需要like值达到150或低于-150！\\n你当前的like值：{current_like:.2f}"}}'
+            
             # 提取新性格描述
             if len(message) > 7:  # "小天，更改性格" 长度为7
                 new_personality = message[7:].strip()
                 if new_personality:
                     # 调用AI的性格更改工具
                     result = self.ai.generate_custom_personality(new_personality, memory_key)
-                    return f'{{"wait_time": 3, "content": "🎭 {result}"}}'
+                    return f'{"wait_time": 3, "content": "🎭 {result}"}'
                 else:
                     return '{"wait_time": 3, "content": "❌ 请提供新的性格描述，例如：小天，更改性格活泼开朗"}'
             else:
@@ -127,32 +134,39 @@ class XiaotianScheduler:
         
         # 检查回到最初性格命令
         elif message.strip() == "小天，回到最初的性格":
+            # 检查用户like值是否达到条件
+            user_like_status = self.ai.get_user_like_status(self.ai._extract_user_id_from_memory_key(memory_key))
+            current_like = user_like_status['total_like']
+            
+            if abs(current_like) < 150:
+                return f'{{"wait_time": 3, "content": "❌ 回到最初性格需要like值达到150或低于-150！\\n你当前的like值：{current_like:.2f}"}}'
+            
             # 调用AI的恢复性格工具
             result = self.ai.restore_original_personality(memory_key)
             return f'{{"wait_time": 3, "content": "🔄 {result}"}}'
         
-        # 检查减少like值命令
-        elif message.startswith("小天，我想减少") and "的like值" in message:
-            # 提取目标用户ID
+        # 检查对冲like值命令
+        elif message.startswith("小天，与") and ("对冲" in message):
+            # 提取目标用户ID和对冲金额
             try:
-                # 匹配"小天，我想减少（userid）的like值"或"小天，我想减少 userid 的like值"
                 import re
-                match = re.search(r'小天，我想减少[（(]?([^）)]*)[）)]?的like值', message)
-                if not match:
-                    match = re.search(r'小天，我想减少\s+([^\s]+)\s+的like值', message)
-                
+                # 匹配"小天，与123456789对冲10"或"小天，与123456789对冲10 好感度"
+                match = re.search(r'小天，与\s*([^\s]+)\s*对冲\s*([0-9.]+)', message)
                 if match:
                     target_partial_id = match.group(1).strip()
-                    if target_partial_id:
-                        # 调用AI的like值转移功能
-                        result = self.ai.transfer_like_value(memory_key, target_partial_id, group_id)
+                    transfer_amount = float(match.group(2).strip())
+                    if target_partial_id and transfer_amount > 0:
+                        # 调用AI的like值转移功能（指定金额）
+                        result = self.ai.transfer_like_value(memory_key, target_partial_id, transfer_amount, group_id)
                         return f'{{"wait_time": 3, "content": "{result}"}}'
                     else:
-                        return '{"wait_time": 3, "content": "❌ 请提供要减少like值的用户ID"}'
+                        return '{"wait_time": 3, "content": "❌ 请提供有效的qq号和对冲金额"}'
                 else:
-                    return '{"wait_time": 3, "content": "❌ 命令格式错误，请使用：小天，我想减少（userid）的like值"}'
+                    return '{"wait_time": 3, "content": "❌ 命令格式错误，请使用：小天，与[qq号]对冲[金额]"}'
+            except ValueError:
+                return '{"wait_time": 3, "content": "❌ 对冲金额必须是数字"}'
             except Exception as e:
-                print(f"处理减少like值命令时发生错误: {e}")
+                print(f"处理对冲like值命令时发生错误: {e}")
                 return '{"wait_time": 3, "content": "❌ 处理命令时发生错误，请稍后重试"}'
         
         return None
@@ -407,7 +421,7 @@ class XiaotianScheduler:
                         return response
                 
                 # 非root用户私聊需要唤醒词
-                return '{"wait_time": 0, "content": ""}'
+                return f'{{"data": [{{"wait_time": 0, "content": ""}}], "like": 0}}'
         else:
             """处理普通聊天消息"""
         
@@ -488,7 +502,7 @@ class XiaotianScheduler:
             self.waiting_time = 5
             print(f"其他用户 {user_id} 在群 {group_id} 发消息，缩短超时时间到 {self.waiting_time}秒")
             
-        return '{"wait_time": 0, "content": ""}'  # 未触发时返回空字符串
+        return f'{{"data": [{{"wait_time": 0, "content": ""}}], "like": 0}}'  # 未触发时返回空字符串
 
     def daily_cleanup_task(self):
         """每日数据清理任务"""

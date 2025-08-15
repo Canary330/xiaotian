@@ -381,16 +381,31 @@ class XiaotianAI:
         """根据部分用户ID查找完整的用户ID（搜索全局like状态中的用户）"""
         matches = []
         
-        # 搜索全局用户like状态中包含该部分ID的项
-        for like_key in self.user_like_status.keys():
+        # 清理旧格式的数据并搜索用户
+        keys_to_remove = []
+        for like_key in list(self.user_like_status.keys()):
             if like_key.startswith("user_"):
                 user_id = like_key[5:]  # 去掉"user_"前缀
                 if partial_id in user_id:
                     matches.append(user_id)
+            elif like_key.startswith("group_") and "_user_" in like_key:
+                # 发现旧格式的group数据，需要清理
+                print(f"发现旧格式的like数据: {like_key}，将被清理")
+                keys_to_remove.append(like_key)
+        
+        # 清理旧格式的数据
+        for key in keys_to_remove:
+            del self.user_like_status[key]
+            print(f"已清理旧格式数据: {key}")
+        
+        # 如果清理了数据，保存文件
+        if keys_to_remove:
+            self.save_memory(MEMORY_FILE)
+            print(f"已清理 {len(keys_to_remove)} 个旧格式的like数据")
         
         return matches
     
-    def transfer_like_value(self, source_memory_key: str, target_partial_id: str, current_group_id: str = None) -> str:
+    def transfer_like_value(self, source_memory_key: str, target_partial_id: str, transfer_amount: float = None, current_group_id: str = None) -> str:
         """使用自己的like值对冲目标用户的like值"""
         # 获取源用户ID和like状态
         source_user_id = self._extract_user_id_from_memory_key(source_memory_key)
@@ -414,21 +429,42 @@ class XiaotianAI:
         target_status = self.get_user_like_status(target_user_id)
         target_like = target_status['total_like']
         
-        if target_like >= 0:
-            return f"⚠️ 目标用户的like值为{target_like:.2f}，无需对冲（只能对冲负值）"
+        # 如果没有指定对冲金额，返回用户当前状态和可选择的范围
+        if transfer_amount is None:
+            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：小天，与{target_partial_id}对冲[金额]"
         
-        # 计算对冲金额（使用绝对值）
-        offset_amount = min(source_like, abs(target_like))
+        # 验证对冲金额
+        if transfer_amount <= 0:
+            return "❌ 对冲金额必须大于0"
+        if transfer_amount > source_like:
+            return f"❌ 对冲金额不能超过你的like值 {source_like:.2f}"
+        
+        # 计算实际效果：被动方扣除8折金额（这里应该是减少，不是增加）
+        actual_effect = transfer_amount * 0.8
+        fee = transfer_amount - actual_effect
+        
+        # 检查被动方是否会低于-150
+        new_target_like = target_like - actual_effect  # 对冲是减少目标用户的like值
+        if new_target_like < -150:
+            # 调整实际效果，使目标用户不低于-150
+            max_effect = target_like + 150  # 最多只能减少到-150
+            actual_effect = max_effect
+            transfer_amount = actual_effect / 0.8
+            fee = transfer_amount - actual_effect
+            new_target_like = -150
+            
+            if transfer_amount > source_like:
+                return f"❌ 目标用户like值接近下限，你的like值不足以进行有效对冲"
         
         # 执行对冲操作
-        source_status['total_like'] = round(source_like - offset_amount, 2)
-        target_status['total_like'] = round(target_like + offset_amount, 2)
+        source_status['total_like'] = round(source_like - transfer_amount, 2)
+        target_status['total_like'] = round(new_target_like, 2)
         
         # 保存状态
         self.save_memory(MEMORY_FILE)
         
         # 返回结果
-        return f"✅ 对冲成功！\n💰 你的like值：{source_like:.2f} → {source_status['total_like']:.2f}\n🎯 目标用户like值：{target_like:.2f} → {target_status['total_like']:.2f}\n💫 对冲金额：{offset_amount:.2f}"
+        return f"✅ 对冲成功！\n💰 你的like值：{source_like:.2f} → {source_status['total_like']:.2f} (-{transfer_amount:.2f})\n🎯 目标用户like值：{target_like:.2f} → {target_status['total_like']:.2f} (-{actual_effect:.2f})\n💫 手续费：{fee:.2f}"
     
     def reset_user_like_system(self, memory_key: str) -> str:
         """重置用户的like系统（管理员功能）"""
@@ -483,8 +519,36 @@ class XiaotianAI:
             return "", None, None, False
             
         try:
+            # 预处理：自动修复JSON中的未转义换行符
+            cleaned_response = ai_response.strip()
+            
+            # 检查是否是JSON格式（包含花括号）
+            if '{' in cleaned_response and '}' in cleaned_response:
+                # 智能转义：只转义未转义的特殊字符
+                def smart_escape_json_strings(text):
+                    
+                    field = 'content'
+                    # 匹配特定字段的值：处理多行内容
+                    field_pattern = f'("{field}"\\s*:\\s*")(.*?)("\\s*[,}}])'
+                    
+                    def smart_escape_field_value(match):
+                        prefix = match.group(1)
+                        value = match.group(2)
+                        suffix = match.group(3)
+                        # 智能转义：只转义未转义的字符
+                        fixed_value = value
+                        # 处理换行符：只转义未转义的 \n
+                        # 使用负向前瞻，确保不转义已经转义的 \\n
+                        fixed_value = re.sub(r'(?<!\\)\n', '\\\\n', fixed_value)
+                        # 处理双引号：只转义未转义的 "
+                        fixed_value = re.sub(r'(?<!\\)"', '\\\\"', fixed_value)
+                        return prefix + fixed_value + suffix
+                    text = re.sub(field_pattern, smart_escape_field_value, text, flags=re.DOTALL)
+                    return text
+                cleaned_response = smart_escape_json_strings(cleaned_response)
+            
             # 尝试直接解析整个响应为JSON
-            full_data = json.loads(ai_response.strip())
+            full_data = json.loads(cleaned_response)
             
             # 检查是否是新格式：{"data": [...], "like": 数字}
             if isinstance(full_data, dict) and 'data' in full_data:

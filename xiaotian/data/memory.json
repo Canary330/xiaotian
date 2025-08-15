@@ -1,1 +1,81 @@
-{}
+{
+    "memory_storage": {},
+    "user_personality": {},
+    "user_like_status": {
+        "user_2407659768": {
+            "total_like": 10,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [
+                5,
+                25,
+                50
+            ],
+            "speed_multiplier": 0.9,
+            "personality_change_count": 0
+        },
+        "user_3472347771": {
+            "total_like": 16.0,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [
+                5
+            ],
+            "speed_multiplier": 1.0,
+            "personality_change_count": 0
+        },
+        "user_3464565677": {
+            "total_like": 45.0,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [
+                5,
+                25
+            ],
+            "speed_multiplier": 0.95,
+            "personality_change_count": 0
+        },
+        "user_3379915795": {
+            "total_like": 0.0,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [],
+            "speed_multiplier": 1.0,
+            "personality_change_count": 0
+        },
+        "user_1791347633": {
+            "total_like": 2.2,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [],
+            "speed_multiplier": 1.0,
+            "personality_change_count": 0
+        },
+        "user_510918875": {
+            "total_like": 28.0,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [
+                5,
+                25
+            ],
+            "speed_multiplier": 0.95,
+            "personality_change_count": 0
+        },
+        "user_2107084889": {
+            "total_like": 1.4,
+            "last_change_direction": null,
+            "reset_count": 0,
+            "original_personality": null,
+            "notified_thresholds": [],
+            "speed_multiplier": 1.0,
+            "personality_change_count": 0
+        }
+    }
+}
