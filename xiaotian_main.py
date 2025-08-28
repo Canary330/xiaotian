@@ -315,6 +315,7 @@ class XiaotianQQBot:
                                 await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response[i])
                             else:
                                 await msg.reply(text=cleaned_response[i])
+                    self.replying_users.discard(user_key)
                     if like_response:
                         sleep_time = 1 + random.uniform(0, 2)
                         self.scheduler.add_response_wait_time(sleep_time)
@@ -331,14 +332,19 @@ class XiaotianQQBot:
                         await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response)
                     else:
                         await msg.reply(text=cleaned_response)
+                    self.replying_users.discard(user_key)
+                else:
+                    self.replying_users.discard(user_key)
 
                 self.scheduler.last_user_id = user_id
                 self.scheduler.last_group_id = group_id
                 
-            finally:
-                # 标记回复结束
-                self.replying_users.discard(user_key)
-
+            except Exception as e:
+                try:
+                    self.replying_users.discard(user_key)
+                    self._log.error(f"处理群消息时出错: {e}")
+                except Exception:
+                    pass
 
     async def on_request(self, request: Request):
         """处理请求（好友申请和群邀请）"""

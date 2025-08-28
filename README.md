@@ -26,15 +26,13 @@ export NCATBOT_ADMIN="你的管理员QQ号"
 
 ### 2. 基础配置 | Basic Configuration
 ```python
-# 在 xiaotian_main.py 中设置 | Set in xiaotian_main.py
-bot_uin = "你的机器人QQ号 | Your bot QQ number"
-root_id = "你的管理员QQ号 | Your admin QQ number"
-```
 在文件夹xiaotian/data/fonts/ 中添加你自己的字体文件，并命名为default.ttf , text.TTF , art.TTF , ciyun.TTF
+```
+
 
 ### 3. 运行启动 | Run and Start
 ```bash
-python xiaotian_main.py
+python3 xiaotian_main.py
 ```
 
 ### 4. 初始设置 | Initial Setup
@@ -53,7 +51,6 @@ python xiaotian_main.py
 - `root_id`: 超级管理员QQ号 | Super administrator QQ number
 
 ### 可选配置 | Optional Configuration
-- `WEATHER_API_KEY`: 天气API密钥 | Weather API key (optional)
 - `TARGET_GROUP_IDS`: 目标群组列表 | Target group list
 - `ADMIN_USER_IDS`: 管理员用户列表 | Administrator user list
 - `BLACKLIST_USER_IDS`: 黑名单用户列表 | Blacklist user list
