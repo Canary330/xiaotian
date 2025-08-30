@@ -8,6 +8,7 @@ venv/
 xiaotian/data/fonts/
 BKUP/
 kaifa.txt
+xiaotian/data/memory.json
 # Logs
 logs/
 *.log
