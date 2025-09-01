@@ -263,18 +263,19 @@ class AstronomyQuiz:
         return start_message, first_question_message
 
         
-    def next_question(self, group_id):
+    def next_question(self, group_id) -> str:
         """进入下一题"""
         if group_id not in self.active_quizzes:
-            return None
+            return ""
             
         quiz = self.active_quizzes[group_id]
         
         # 增加当前题目索引
         quiz["current_question"] += 1
         
-        # 检查是否已完成所有题目
-        if quiz["current_question"] > len(quiz["questions"]) or quiz["current_question"] > quiz["total_rounds"]:
+        # 检查是否已完成所有题目 - 修复题目数量
+        # 使用等号而不是大于号，确保只问用户要求的题目数量
+        if quiz["current_question"] > quiz["total_rounds"] or quiz["current_question"] > len(quiz["questions"]):
             # 竞答完成，返回结果
             return self.finish_quiz(group_id)
             
@@ -334,7 +335,7 @@ class AstronomyQuiz:
         quiz["start_time"] = datetime.now()
         return message
         
-    def handle_question_timeout(self, group_id: str) -> str:
+    def handle_question_timeout(self, group_id: str) -> Tuple[str, str]:
         """
         处理单个题目超时，展示答案并进入下一题
         
@@ -342,10 +343,10 @@ class AstronomyQuiz:
             group_id: 群组ID
             
         Returns:
-            str: 当前题目结果和下一题信息
+            Tuple[str, str]: 当前题目结果和下一题信息，分为两个部分返回
         """
         if group_id not in self.active_quizzes:
-            return "⚠️ 本群当前没有正在进行的竞答！"
+            return "⚠️ 本群当前没有正在进行的竞答！", ""
             
         quiz = self.active_quizzes[group_id]
         current_index = quiz["current_question"] - 1
@@ -399,12 +400,15 @@ class AstronomyQuiz:
         
         # 进入下一题
         next_question = self.next_question(group_id)
+        
+        # 返回两部分消息，让调用者决定如何发送
         if next_question:
-            return f"{result_message}\n{next_question}"
+            return result_message, next_question
         else:
-            return self.finish_quiz(group_id)
+            result_message2, final_message = self.finish_quiz(group_id)
+            return result_message + "\n" + result_message2, final_message
     
-    def finish_quiz(self, group_id: str, user_id: str = None) -> str:
+    def finish_quiz(self, group_id: str, user_id: str = None) -> Tuple[str, str]:
         """
         完成整个竞答，计算结果并发放奖励
         
@@ -413,22 +417,18 @@ class AstronomyQuiz:
             user_id: 可选，提前结束竞答的用户ID
             
         Returns:
-            str: 竞答结果信息
+            Tuple[str, str]: 竞答结果信息的两个部分，用于分开发送
         """
         if group_id not in self.active_quizzes:
-            return "⚠️ 本群当前没有正在进行的竞答！"
+            return "⚠️ 本群当前没有正在进行的竞答！", ""
         
         quiz = self.active_quizzes[group_id]
-        
-        # 获取最终答题进度百分比
-        percent = int(quiz['current_question'] / quiz['total_rounds'] * 100) if quiz['total_rounds'] else 0
-        progress = f"{quiz['current_question']}/{quiz['total_rounds']} ({percent}%)"
-        
+
         # 构建结果消息
         if user_id:
-            result_message = f"🛑 用户提前结束了本次竞答！(进度: {progress})\n\n"
+            result_message = f"🛑 用户提前结束了本次竞答！\n\n"
         else:
-            result_message = f"🏁 天文知识竞答已完成！(进度: {progress})\n\n"
+            result_message = f"🏁 天文知识竞答已完成！\n\n"
         
         # 统计所有用户得分
         user_scores = {}
@@ -455,26 +455,24 @@ class AstronomyQuiz:
             # 根据排名分配奖励
             for i, (u_id, score) in enumerate(ranked_scores):
                 # 只有正分才有奖励
+                con = True
                 if score <= 0:
-                    continue
-                
+                    reward = abs(score)
+                    con = False
                 if i == 0:  # 第一名
-                    reward = 50 + min(score, self.reward_first_bonus)
-                    result_message += f"🥇 第1名：用户 {u_id} - {score}分，奖励 +{reward} 好感度\n"
+                    reward = 500 if con else 8
+                    result_message += f"🥇 第1名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 elif i == 1:  # 第二名
-                    reward = 30 + min(score//2, self.reward_first_bonus//2)
-                    result_message += f"🥈 第2名：用户 {u_id} - {score}分，奖励 +{reward} 好感度\n"
+                    reward = 300 if con else 5
+                    result_message += f"🥈 第2名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 elif i == 2:  # 第三名
-                    reward = 10 + min(score//3, self.reward_first_bonus//3)
-                    result_message += f"🥉 第3名：用户 {u_id} - {score}分，奖励 +{reward} 好感度\n"
-                elif i < min(5, participant_count):  # 前5名或全部参与者
-                    reward = 3
-                    result_message += f"🎖️ 第{i+1}名：用户 {u_id} - {score}分，奖励 +{reward} 好感度\n"
+                    reward = 100 if con else 3
+                    result_message += f"🥉 第3名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 else:
                     reward = 1
                     # 只显示前10名
                     if i == min(10, participant_count):
-                        result_message += f"...其余参与者各奖励 +{reward} 好感度\n"
+                        result_message += f"...其余参与者各额外奖励 +{reward:.2f} 好感度\n"
                 
                 # 添加好感度奖励
                 if self.ai:
@@ -489,24 +487,16 @@ class AstronomyQuiz:
             
             for u_id, score in ranked_scores:
                 # 计算奖励
-                reward = round(score * 2, 2)
+                reward = round(score, 2)
                 if reward > 0:
                     # 正分按照得分计算奖励，每1分对应2点好感度
-                    result_message += f"👤 [CQ:at,qq={u_id}]：{score}分，奖励 +{reward} 好感度\n"
+                    result_message += f"👤 [CQ:at,qq={u_id}]：{score:.2f}分，将按比例奖励好感度\n"
                 elif score == 0:
                     # 0分给予参与奖励
                     reward = 5
-                    result_message += f"👤 [CQ:at,qq={u_id}]：{score}分，参与奖励 +{reward} 好感度\n"
+                    result_message += f"👤 [CQ:at,qq={u_id}]：参与奖励 +{reward:.2f} 好感度\n"
                 else:
-                    result_message += f"👤 [CQ:at,qq={u_id}]：{score}分，无奖励\n"
-                
-                # 添加好感度奖励
-                if self.ai and reward > 0:
-                    try:
-                        user_memory_key = self.ai._get_memory_key(u_id, group_id)
-                        self.ai.update_user_like(user_memory_key, reward)
-                    except Exception as e:
-                        print(f"❌ 更新用户 {u_id} 好感度时出错: {e}")
+                    result_message += f"👤 [CQ:at,qq={u_id}]：{score:.2f}，将扣除该成绩下1/4好感度\n"
         
         # 清理该群的竞答状态
         try:
@@ -515,9 +505,15 @@ class AstronomyQuiz:
             print(f"❌ 清理竞答状态时发生异常: {e}")
             self.active_quizzes.clear()
         
-        return result_message
+        # 将结果消息分为两部分，以便分开发送
+        # 第一部分：竞答结束标题
+        part1 = result_message.split('\n\n')[0] if '\n\n' in result_message else result_message
+        # 第二部分：详细结果
+        part2 = '\n\n'.join(result_message.split('\n\n')[1:]) if '\n\n' in result_message else ""
         
-    def process_answer(self, user_id: str, message: str, group_id: str) -> Optional[str]:
+        return part1, part2
+        
+    def process_answer(self, user_id: str, message: str, group_id: str) -> Tuple[str, str]:
         """
         处理用户的竞答回答
         
@@ -527,11 +523,11 @@ class AstronomyQuiz:
             group_id: 群组ID
             
         Returns:
-            Optional[str]: 回答反馈，如果不是当前群的竞答或不是有效回答则返回None
+            Tuple[str, str]: 回答反馈和下一题/结果消息，如果不是当前群的竞答或不是有效回答则返回空字符串
         """
         # 检查该群是否有正在进行的竞答
         if group_id not in self.active_quizzes:
-            return None
+            return "", ""
             
         # 检查竞答是否已超时
         current_time = datetime.now()
@@ -540,11 +536,11 @@ class AstronomyQuiz:
         # 检查当前题目是否已有人答对（抢答模式下，一旦有人答对就不再接受答案）
         has_correct_answer = any(p.get("correct", False) for p in quiz["participants"].values())
         if has_correct_answer:
-            return None
+            return "", ""
             
         # 检查用户是否已经回答过当前题目
         if user_id in quiz["participants"]:
-            return None  # 不重复提示，避免刷屏
+            return "", ""  # 不重复提示，避免刷屏
             
         # 检查命令是否是结算指令
         if message.strip() == "结算" or message.strip().lower() == "结束":
@@ -555,7 +551,7 @@ class AstronomyQuiz:
                 return f"⚠️ 至少需要回答一题才能结算！"
             
 
-        if (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
+        if (current_time - quiz["start_time"]).total_seconds() - 7 > quiz["duration"]:
             # 竞答已结束，触发结束流程并进入下一题或结束
             return self.handle_question_timeout(group_id)
             
@@ -599,7 +595,7 @@ class AstronomyQuiz:
             return None  # 未知题目类型
             
         # 计算答题用时
-        time_used = (current_time - quiz["start_time"]).total_seconds()
+        time_used = max(((current_time - quiz["start_time"]).total_seconds() - 7), 0)
         
         # 记录参与者回答
         quiz["participants"][user_id] = {
@@ -617,11 +613,11 @@ class AstronomyQuiz:
         if user_id not in quiz.get("scores", {}):
             quiz.setdefault("scores", {})[user_id] = 0
         
+        # 获取题目难度 - 将其移到if语句外面，使其对正确和错误的回答都可用
+        difficulty = question_data.get("difficulty", "normal")
+        
         # 更新用户积分统计
         if is_correct:
-            # 根据题目难度计算奖励
-            difficulty = question_data.get("difficulty", "normal")
-            
             # 判断是否是第一个答对的（始终为True，因为有人回答后立即进入下一题）
             is_first = True
             
@@ -632,7 +628,7 @@ class AstronomyQuiz:
             self.user_scores[user_id]["correct"] += 1
             self.user_scores[user_id]["points"] += points
             quiz["scores"][user_id] = quiz["scores"].get(user_id, 0) + points
-            response = f"🎉抢答正确！+{points}分"
+            response = f"🎉抢答正确！+{points:.2f}分"
             
             # 显示答题时间
             time_used_str = f"用时: {time_used:.1f}秒"
@@ -640,17 +636,34 @@ class AstronomyQuiz:
         else:
             # 记录错误答题
             self.user_scores[user_id]["wrong"] += 1
-            points = self._calculate_reward(time_used, is_first=False)
+            points = self._calculate_reward(time_used, is_first=False, difficulty=difficulty)
             self.user_scores[user_id]["points"] -= points  
             quiz["scores"][user_id] = quiz["scores"].get(user_id, 0) - points
-            response = f"❌ 回答错误! -{points}分"
+            response = f"❌ 回答错误! -{points:.2f}分"
         
+        # 计算好感度调整
+        if self.ai:
+            try:
+                user_memory_key = self.ai._get_memory_key(user_id, group_id)
+                if is_correct and points > 0:
+                    # 答对，好感度直接加上分数
+                    like_change = points
+                    self.ai.update_user_like(user_memory_key, like_change)
+                elif not is_correct and points > 0:
+                    # 答错，好感度减去分数除以4，保留2位小数
+                    like_change = -round(points / 4, 2)
+                    self.ai.update_user_like(user_memory_key, like_change)
+            except Exception as e:
+                print(f"❌ 更新好感度时出错: {e}")
+                
         # 无论对错，都立即进入下一题或结束竞答
         next_question = self.next_question(group_id)
+        
+        # 返回两个独立的消息，让调用者决定如何发送
         if next_question:
-            return f"{response}\n\n{next_question}"
+            return response, next_question
         else:
-            return f"{response}\n\n{self.finish_quiz(group_id)}"
+            return response, self.finish_quiz(group_id)
     
     def _calculate_reward(self, time_used: float, is_first: bool, difficulty: str = "normal") -> int:
         """
@@ -672,15 +685,15 @@ class AstronomyQuiz:
             
         # 时间加成 (越快回答越多)
         # 使用反比例函数计算时间系数
-        if 4 <= time_used <= self.quiz_duration:
+        if time_used <= self.quiz_duration * 0.8:
             # 定义一个平滑的二次函数
-            a = 1000 / (self.quiz_duration)**2
+            a = 1000 / (self.quiz_duration * 0.8)**2
             c = 1
             # 计算 time_factor
-            time_factor = a * (time_used - self.quiz_duration * 0.8 - 4)**2 + c
+            time_factor = a * (time_used - self.quiz_duration * 0.8)**2 + c
             # 确保 time_factor 在合理范围内
             time_factor = max(1, time_factor)
-        elif time_used < 4:
+        elif time_used < 0:
             time_factor = 1000  # 超过quiz_duration * 0.8时，time_factor为0
         else:
             time_factor = 1

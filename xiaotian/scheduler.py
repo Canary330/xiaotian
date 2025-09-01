@@ -135,21 +135,30 @@ class XiaotianScheduler:
                 except ValueError:
                     pass  # 解析失败，使用默认值
                     
+            # 获取开始提示和第一题
             result, message = self.astronomy_quiz.start_quiz(group_id, question_count)
             if message:
+                # 分开发送这两条消息，中间延迟4秒
                 return f'{{"data": [{{"wait_time": 1, "content": "{result}"}}, {{"wait_time": 3, "content": "{message}"}}], "like": 0}}'
             return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
             
         # 检查是否是竞答结束命令
         if message.strip() in ["结算", "结束竞答"] and group_id and group_id in self.astronomy_quiz.active_quizzes:
-            result = self.astronomy_quiz.finish_quiz(group_id, user_id)
-            return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            result1, result2 = self.astronomy_quiz.finish_quiz(group_id, user_id)
+            # 分开发送结束通知和结果详情，中间延迟4秒
+            if result2:
+                return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}, {{"wait_time": 4, "content": "{result2}"}}], "like": 0}}'
+            else:
+                return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}], "like": 0}}'
             
         # 检查群组是否处于竞答模式，如果是则将所有消息视为答案
         if group_id and group_id in self.astronomy_quiz.active_quizzes:
-            result = self.astronomy_quiz.process_answer(user_id, message, group_id)
-            if result:
-                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            response, next_question = self.astronomy_quiz.process_answer(user_id, message, group_id)
+            if response and next_question:
+                # 分开发送答题反馈和下一题目，中间延迟4秒
+                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}, {{"wait_time": 4, "content": "{next_question}"}}], "like": 0}}'
+            elif response:
+                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}], "like": 0}}'
                     
         # 检查更改性格命令
         if message.startswith("小天，更改性格"):
@@ -268,10 +277,17 @@ class XiaotianScheduler:
                                 current_time = datetime.now()
                                 if "start_time" in quiz and (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
                                     # 如果当前题目已超时，处理超时
-                                    result_msg = self.astronomy_quiz.handle_question_timeout(group_id)
-                                    if result_msg and self.root_manager.settings['qq_send_callback']:
+                                    result_msg1, result_msg2 = self.astronomy_quiz.handle_question_timeout(group_id)
+                                    if self.root_manager.settings.get('qq_send_callback'):
                                         try:
-                                            self.root_manager.settings['qq_send_callback']('group', group_id, result_msg, None)
+                                            # 先发送超时通知
+                                            if result_msg1:
+                                                self.root_manager.settings['qq_send_callback']('group', group_id, result_msg1, None)
+                                            
+                                            # 延迟5秒后发送下一题或结果
+                                            if result_msg2:
+                                                time.sleep(5)
+                                                self.root_manager.settings['qq_send_callback']('group', group_id, result_msg2, None)
                                         except Exception as e:
                                             print(f"发送题目超时消息失败: {e}")
                 else:
