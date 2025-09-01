@@ -57,42 +57,45 @@ class AstronomyPoster:
     
     def daily_astronomy_task(self):
         """每日天文海报任务"""
-        if not self.root_manager.is_feature_enabled('daily_astronomy'):
-            return
-            
-        print(f"🔭 {dt.now().strftime('%H:%M')} - 执行每日天文海报任务")
-        
-        if self.last_astronomy_post:
-            # 如果有上次处理的天文海报，使用它
-            image_path, message = self.last_astronomy_post
-            
-            print(f"📢 发送天文海报：{image_path}")
-            
-            # 发送到目标群组
-            target_groups = self.root_manager.get_target_groups()
-            if target_groups:
-                self.message_sender.send_message_to_groups(message, image_path)
+        try:
+            if not self.root_manager.is_feature_enabled('daily_astronomy'):
+                return
 
-                # 延时10秒后发送AI点评
-                if hasattr(self, 'astronomy') and self.astronomy and self.latest_ai_comment:
-                    import threading
-                    def send_ai_comment():
-                        time.sleep(10)  # 延时10秒
-                        try:
-                            ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
-                            self.message_sender.send_message_to_groups(ai_comment_message, None)
-                            print(f"📝 已发送AI点评到群聊")
-                        except Exception as e:
-                            print(f"❌ 发送AI点评失败：{e}")
-                    
-                    # 在后台线程中发送AI点评
-                    comment_thread = threading.Thread(target=send_ai_comment)
-                    comment_thread.start()
-                    self.last_astronomy_post = None  # 清除最近的海报记录
+            print(f"🔭 {dt.now().strftime('%H:%M')} - 执行每日天文海报任务")
+
+            if self.last_astronomy_post:
+                # 如果有上次处理的天文海报，使用它
+                image_path, message = self.last_astronomy_post
+
+                print(f"📢 发送天文海报：{image_path}")
+
+                # 发送到目标群组
+                target_groups = self.root_manager.get_target_groups()
+                if target_groups:
+                    self.message_sender.send_message_to_groups(message, image_path)
+
+                    # 延时10秒后发送AI点评
+                    if hasattr(self, 'astronomy') and self.astronomy and self.latest_ai_comment:
+                        import threading
+                        def send_ai_comment():
+                            time.sleep(10)  # 延时10秒
+                            try:
+                                ai_comment_message = f"🌟 小天点评：{self.latest_ai_comment}"
+                                self.message_sender.send_message_to_groups(ai_comment_message, None)
+                                print(f"📝 已发送AI点评到群聊")
+                            except Exception as e:
+                                print(f"❌ 发送AI点评失败：{e}")
+
+                        # 在后台线程中发送AI点评
+                        comment_thread = threading.Thread(target=send_ai_comment)
+                        comment_thread.start()
+                        self.last_astronomy_post = None  # 清除最近的海报记录
+                else:
+                    print("⚠️ 没有设置目标群组，天文海报未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
             else:
-                print("⚠️ 没有设置目标群组，天文海报未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
-        else:
-            print("⚠️ 没有可用的天文海报")
+                print("⚠️ 没有可用的天文海报")
+        except Exception:
+            pass
 
     def _handle_astronomy_poster(self, content: str, user_id: str) -> str:
         """处理天文海报制作请求"""

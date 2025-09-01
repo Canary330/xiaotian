@@ -7,6 +7,7 @@ import os
 import json
 import shutil
 import base64
+import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 import glob
@@ -48,6 +49,7 @@ class RootManager:
                 'qq_send_callback': None,  # QQ发送回调函数（运行时设置）
                 'target_groups': data.get('target_groups', [815140803]),  # 目标群组
                 'weather_city': data.get('weather_city', '双流'),  # 天气城市
+                'permanent_admins': data.get('permanent_admins', []),  # 常驻管理员QQ号列表
                 'enabled_features': data.get('enabled_features', {
                     'daily_weather': True,
                     'daily_astronomy': True,
@@ -65,6 +67,7 @@ class RootManager:
                 'qq_send_callback': None,
                 'target_groups': [],
                 'weather_city': '双流',
+                'permanent_admins': [],  # 常驻管理员QQ号列表
                 'enabled_features': {
                     'daily_weather': True,
                     'daily_astronomy': True,
@@ -85,9 +88,80 @@ class RootManager:
         except Exception as e:
             print(f"保存Root设置失败：{e}")
     
+    # 临时管理员系统
+    def __init__(self, root_id: str):
+        self.root_id = root_id
+        self.settings_file = ROOT_ADMIN_DATA_FILE
+        self.load_settings()
+        
+        # AI实例（运行时设置）
+        self.ai = None
+        
+        # 临时管理员列表（仅在内存中）
+        self.temp_admins = []
+        
+        # 等待图片的用户命令
+        self.pending_operations = {}  # user_id: {"type": "image", "name": "filename"}
+
+        # 确保必要的目录存在
+        os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+        os.makedirs(ASTRONOMY_IMAGES_DIR, exist_ok=True)
+        os.makedirs(ASTRONOMY_FONTS_DIR, exist_ok=True)
+    
     def is_root(self, user_id: str) -> bool:
-        """检查是否是Root用户"""
-        return user_id == self.root_id
+        """检查是否是Root用户或管理员"""
+        if user_id == self.root_id:
+            return True
+        # 检查是否是常驻管理员
+        if user_id in self.settings.get('permanent_admins', []):
+            return True
+        # 检查是否是临时管理员
+        if user_id in self.temp_admins:
+            return True
+        return False
+        
+    def add_temp_admin(self, admin_id: str) -> bool:
+        """添加临时管理员"""
+        if admin_id not in self.temp_admins:
+            self.temp_admins.append(admin_id)
+            print(f"✅ 已添加临时管理员: {admin_id}")
+            return True
+        return False
+        
+    def remove_temp_admin(self, admin_id: str) -> bool:
+        """移除临时管理员"""
+        if admin_id in self.temp_admins:
+            self.temp_admins.remove(admin_id)
+            print(f"✅ 已移除临时管理员: {admin_id}")
+            return True
+        return False
+        
+    def add_permanent_admin(self, admin_id: str) -> bool:
+        """添加常驻管理员"""
+        if admin_id not in self.settings.get('permanent_admins', []):
+            if 'permanent_admins' not in self.settings:
+                self.settings['permanent_admins'] = []
+            self.settings['permanent_admins'].append(admin_id)
+            self.save_settings()
+            print(f"✅ 已添加常驻管理员: {admin_id}")
+            return True
+        return False
+        
+    def remove_permanent_admin(self, admin_id: str) -> bool:
+        """移除常驻管理员"""
+        if admin_id in self.settings.get('permanent_admins', []):
+            self.settings['permanent_admins'].remove(admin_id)
+            self.save_settings()
+            print(f"✅ 已移除常驻管理员: {admin_id}")
+            return True
+        return False
+        
+    def clear_temp_admins(self) -> int:
+        """清除所有临时管理员"""
+        count = len(self.temp_admins)
+        self.temp_admins.clear()
+        print(f"✅ 已清除所有临时管理员: {count}人")
+        return count
     
     def set_qq_callback(self, callback):
         """设置QQ消息发送回调函数"""
@@ -173,6 +247,51 @@ class RootManager:
         # 查看设置
         if message == "小天，查看设置":
             return self._show_settings()
+            
+        # 管理员命令
+        # 添加临时管理员
+        if message.startswith("小天，添加临时管理员："):
+            admin_id = message.replace("小天，添加临时管理员：", "").strip()
+            return self._add_temp_admin(admin_id)
+            
+        # 添加常驻管理员
+        if message.startswith("小天，添加常驻管理员："):
+            admin_id = message.replace("小天，添加常驻管理员：", "").strip()
+            return self._add_permanent_admin(admin_id)
+            
+        # 移除临时管理员
+        if message.startswith("小天，移除临时管理员："):
+            admin_id = message.replace("小天，移除临时管理员：", "").strip()
+            return self._remove_temp_admin(admin_id)
+            
+        # 移除常驻管理员
+        if message.startswith("小天，移除常驻管理员："):
+            admin_id = message.replace("小天，移除常驻管理员：", "").strip()
+            return self._remove_permanent_admin(admin_id)
+            
+        # 查看管理员列表
+        if message == "小天，查看管理员":
+            return self._list_admins()
+            
+        # 题库管理命令
+        # 添加题目
+        if message.startswith("小天，添加题目：") and self.ai:
+            content = message.replace("小天，添加题目：", "").strip()
+            return self._add_quiz_question(content)
+            
+        # 修改题目
+        if message.startswith("小天，修改题目：") and self.ai:
+            content = message.replace("小天，修改题目：", "").strip()
+            return self._edit_quiz_question(content)
+            
+        # 删除题目
+        if message.startswith("小天，删除题目：") and self.ai:
+            content = message.replace("小天，删除题目：", "").strip()
+            return self._delete_quiz_question(content)
+            
+        # 查看题库
+        if message == "小天，查看题库" and self.ai:
+            return self._list_quiz_questions()
         
         # 启用/禁用功能
         if message.startswith("小天，启用功能："):
@@ -210,11 +329,6 @@ class RootManager:
         if message.startswith("小天，重置like系统："):
             user_key = message.replace("小天，重置like系统：", "").strip()
             return ("RESET_LIKE_SYSTEM", user_key)
-        
-        # 查看用户like状态
-        if message.startswith("小天，查看like状态："):
-            user_key = message.replace("小天，查看like状态：", "").strip()
-            return ("CHECK_LIKE_STATUS", user_key)
         
         # 重置所有like系统
         if message == "小天，重置所有like系统":
@@ -409,13 +523,9 @@ class RootManager:
         """更换AI模型"""
         # 模型映射表
         model_mapping = {
-            'k2': 'kimi-k2-0711-preview',
-            'k1': 'moonshot-v1-8k',
-            'kimi': 'kimi-k2-0711-preview',
-            'moonshot': 'moonshot-v1-8k',
-            'v1-8k': 'moonshot-v1-8k',
-            'v1-32k': 'moonshot-v1-32k',
-            'v1-128k': 'moonshot-v1-128k'
+            'ds': 'deepseek-chat',
+            'deepseek': 'deepseek-chat',
+            'reasoner': 'deepseek-reasoner',
         }
         
         if not model_param:
@@ -446,7 +556,6 @@ class RootManager:
                 content = f.read()
             
             # 查找并替换USE_MODEL行
-            import re
             pattern = r'USE_MODEL\s*=\s*["\'][^"\']*["\']'
             new_line = f'USE_MODEL = "{target_model}"'
             
@@ -471,3 +580,343 @@ class RootManager:
     def get_target_groups(self) -> List[str]:
         """获取目标群组"""
         return self.settings['target_groups']
+        
+    # 管理员相关命令处理
+    def _add_temp_admin(self, admin_id: str) -> Tuple[str, Any]:
+        """添加临时管理员"""
+        try:
+            if not admin_id or not admin_id.strip().isdigit():
+                return ("❌ 无效的QQ号！", None)
+            
+            admin_id = admin_id.strip()
+            if self.add_temp_admin(admin_id):
+                return (f"✅ 已添加临时管理员: {admin_id}", None)
+            else:
+                return (f"⚠️ {admin_id} 已经是临时管理员", None)
+        except Exception as e:
+            return (f"❌ 添加临时管理员失败: {str(e)}", None)
+    
+    def _add_permanent_admin(self, admin_id: str) -> Tuple[str, Any]:
+        """添加常驻管理员"""
+        try:
+            if not admin_id or not admin_id.strip().isdigit():
+                return ("❌ 无效的QQ号！", None)
+            
+            admin_id = admin_id.strip()
+            if self.add_permanent_admin(admin_id):
+                return (f"✅ 已添加常驻管理员: {admin_id}", None)
+            else:
+                return (f"⚠️ {admin_id} 已经是常驻管理员", None)
+        except Exception as e:
+            return (f"❌ 添加常驻管理员失败: {str(e)}", None)
+    
+    def _remove_temp_admin(self, admin_id: str) -> Tuple[str, Any]:
+        """移除临时管理员"""
+        try:
+            if not admin_id or not admin_id.strip().isdigit():
+                return ("❌ 无效的QQ号！", None)
+            
+            admin_id = admin_id.strip()
+            if self.remove_temp_admin(admin_id):
+                return (f"✅ 已移除临时管理员: {admin_id}", None)
+            else:
+                return (f"⚠️ {admin_id} 不是临时管理员", None)
+        except Exception as e:
+            return (f"❌ 移除临时管理员失败: {str(e)}", None)
+    
+    def _remove_permanent_admin(self, admin_id: str) -> Tuple[str, Any]:
+        """移除常驻管理员"""
+        try:
+            if not admin_id or not admin_id.strip().isdigit():
+                return ("❌ 无效的QQ号！", None)
+            
+            admin_id = admin_id.strip()
+            if self.remove_permanent_admin(admin_id):
+                return (f"✅ 已移除常驻管理员: {admin_id}", None)
+            else:
+                return (f"⚠️ {admin_id} 不是常驻管理员", None)
+        except Exception as e:
+            return (f"❌ 移除常驻管理员失败: {str(e)}", None)
+    
+    def _list_admins(self) -> Tuple[str, Any]:
+        """列出所有管理员"""
+        try:
+            temp_admins = self.temp_admins
+            permanent_admins = self.settings.get('permanent_admins', [])
+            
+            result = "🔑 管理员列表：\n"
+            
+            if permanent_admins:
+                result += "📌 常驻管理员：\n"
+                for admin in permanent_admins:
+                    result += f" - {admin}\n"
+            else:
+                result += "📌 常驻管理员：无\n"
+            
+            if temp_admins:
+                result += "⏱️ 临时管理员：\n"
+                for admin in temp_admins:
+                    result += f" - {admin}\n"
+            else:
+                result += "⏱️ 临时管理员：无\n"
+            
+            return (result.strip(), None)
+        except Exception as e:
+            return (f"❌ 获取管理员列表失败: {str(e)}", None)
+            
+    # 题库管理相关命令处理
+    def _add_quiz_question(self, content: str) -> Tuple[str, Any]:
+        """添加题目到竞答题库"""
+        try:
+            if not content.strip():
+                return ("❌ 题目内容不能为空！", None)
+            
+            # 解析用户输入
+            question_data = self._parse_question_from_text(content)
+            if not question_data:
+                return ("❌ 无法解析题目内容！请使用正确的格式。\n选择题例如：题目：太阳系中最大的行星是？\n选项：A:木星 B:土星 C:天王星 D:海王星\n答案：A\n难度：1\n\n填空题例如：题目：人类首次载人登月的区域是？\n答案：静海\n难度：2", None)
+            
+            # 添加到JSON文件
+            result = self._add_question_to_json(question_data)
+            return (f"✅ {result}", None)
+        except Exception as e:
+            return (f"❌ 添加题目失败: {str(e)}", None)
+    
+    def _parse_question_from_text(self, text: str) -> Optional[dict]:
+        """解析用户输入的题目格式"""
+        try:
+            lines = text.strip().split('\n')
+            question_data = {
+                "difficulty": "normal",
+                "reference": ""
+            }
+            
+            has_options = False
+            
+            for line in lines:
+                if "：" in line or ":" in line:
+                    key, value = line.replace("：", ":").split(":", 1)
+                    key = key.strip().lower()
+                    value = value.strip()
+                    
+                    if key in ["题目", "问题"]:
+                        question_data["question"] = value
+                    elif key in ["选项"]:
+                        has_options = True
+                        # 解析选项格式：A:选项1 B:选项2 C:选项3 D:选项4
+                        options = []
+                        # 按字母分割选项
+                        pattern = r'([A-E]):([^A-E]*?)(?=[A-E]:|$)'
+                        matches = re.findall(pattern, value.upper())
+                        
+                        if matches:
+                            # 按字母顺序排序
+                            sorted_matches = sorted(matches, key=lambda x: x[0])
+                            options = [match[1].strip() for match in sorted_matches]
+                        
+                        if len(options) >= 2:
+                            question_data["options"] = options
+                            question_data["type"] = "multiple_choice"
+                        else:
+                            return None
+                    elif key in ["答案"]:
+                        if has_options:
+                            # 选择题：答案为字母
+                            if value.upper() in "ABCDE":
+                                question_data["correct"] = ord(value.upper()) - ord('A')
+                            else:
+                                return None
+                        else:
+                            # 填空题：答案为文本
+                            question_data["answer"] = value
+                            question_data["type"] = "fill_blank"
+                    elif key in ["难度"]:
+                        if value in ["1", "简单", "easy"]:
+                            question_data["difficulty"] = "easy"
+                        elif value in ["2", "普通", "normal", "一般"]:
+                            question_data["difficulty"] = "normal"
+                        elif value in ["3", "困难", "difficult", "hard"]:
+                            question_data["difficulty"] = "difficult"
+                    elif key in ["参考", "reference"]:
+                        question_data["reference"] = value
+            
+            # 检查必要字段
+            if "question" not in question_data:
+                return None
+                
+            if has_options:
+                # 选择题：需要选项和正确答案索引
+                if "options" not in question_data or "correct" not in question_data:
+                    return None
+                # 验证答案索引不超过选项数量
+                if question_data["correct"] >= len(question_data["options"]):
+                    return None
+            else:
+                # 填空题：需要答案文本
+                if "answer" not in question_data:
+                    return None
+                question_data["type"] = "fill_blank"
+                
+            return question_data
+        except Exception:
+            return None
+    
+    def _add_question_to_json(self, question_data: dict) -> str:
+        """添加题目到JSON文件"""
+        try:
+            # 获取JSON文件路径（上上级目录下的data目录）
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            parent_dir = os.path.dirname(current_dir)  # xiaotian目录
+            grandparent_dir = os.path.dirname(parent_dir)  # xiaotian目录
+            json_path = os.path.join(grandparent_dir, "data", "astronomy_quiz.json")
+            
+            # 确保data目录存在
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+            
+            # 读取现有数据
+            if os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    questions = json.load(f)
+            else:
+                questions = []
+            
+            # 添加新题目
+            questions.append(question_data)
+            
+            # 写回文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(questions, f, ensure_ascii=False, indent=2)
+            
+            return f"题目已添加到题库，当前共有 {len(questions)} 道题目"
+        except Exception as e:
+            raise Exception(f"写入JSON文件失败: {str(e)}")
+    
+    def _edit_quiz_question(self, content: str) -> Tuple[str, Any]:
+        """修改竞答题库中的题目"""
+        try:
+            if not content.strip():
+                return ("❌ 请提供要修改的题目关键词和新的内容！", None)
+            
+            # 解析输入，格式：关键词：xxx\n题目：新内容...
+            parts = content.strip().split('\n', 1)
+            if len(parts) != 2:
+                return ("❌ 格式错误！请使用格式：\n关键词：xxx\n题目：新题目内容\n选项：...\n答案：...", None)
+            
+            keyword = parts[0].replace("关键词：", "").replace("关键字：", "").strip()
+            new_content = parts[1].strip()
+            
+            if not keyword or not new_content:
+                return ("❌ 关键词和新内容不能为空！", None)
+            
+            # 解析新题目内容
+            new_question_data = self._parse_question_from_text(new_content)
+            if not new_question_data:
+                return ("❌ 无法解析新的题目内容！", None)
+            
+            # 修改JSON文件中的题目
+            result = self._edit_question_in_json(keyword, new_question_data)
+            return (f"✅ {result}", None)
+        except Exception as e:
+            return (f"❌ 修改题目失败: {str(e)}", None)
+    
+    def _edit_question_in_json(self, keyword: str, new_question_data: dict) -> str:
+        """修改JSON文件中的题目"""
+        try:
+            # 获取JSON文件路径
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            parent_dir = os.path.dirname(current_dir)
+            grandparent_dir = os.path.dirname(parent_dir)
+            json_path = os.path.join(grandparent_dir, "data", "astronomy_quiz.json")
+            
+            if not os.path.exists(json_path):
+                return "题库文件不存在"
+            
+            # 读取现有数据
+            with open(json_path, 'r', encoding='utf-8') as f:
+                questions = json.load(f)
+            
+            # 查找匹配的题目
+            found = False
+            for i, question in enumerate(questions):
+                if keyword.lower() in question.get("question", "").lower():
+                    questions[i] = new_question_data
+                    found = True
+                    break
+            
+            if not found:
+                return f"未找到包含关键词 '{keyword}' 的题目"
+            
+            # 写回文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(questions, f, ensure_ascii=False, indent=2)
+            
+            return f"题目已修改，当前共有 {len(questions)} 道题目"
+        except Exception as e:
+            raise Exception(f"修改JSON文件失败: {str(e)}")
+    
+    def _delete_quiz_question(self, content: str) -> Tuple[str, Any]:
+        """从竞答题库中删除题目"""
+        try:
+            keyword = content.strip()
+            if not keyword:
+                return ("❌ 请提供要删除的题目关键词！", None)
+            
+            # 从JSON文件中删除题目
+            result = self._delete_question_from_json(keyword)
+            return (f"✅ {result}", None)
+        except Exception as e:
+            return (f"❌ 删除题目失败: {str(e)}", None)
+    
+    def _delete_question_from_json(self, keyword: str) -> str:
+        """从JSON文件中删除题目"""
+        try:
+            # 获取JSON文件路径
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            parent_dir = os.path.dirname(current_dir)
+            grandparent_dir = os.path.dirname(parent_dir)
+            json_path = os.path.join(grandparent_dir, "data", "astronomy_quiz.json")
+            
+            if not os.path.exists(json_path):
+                return "题库文件不存在"
+            
+            # 读取现有数据
+            with open(json_path, 'r', encoding='utf-8') as f:
+                questions = json.load(f)
+            
+            # 查找并删除匹配的题目
+            original_count = len(questions)
+            questions = [q for q in questions if keyword.lower() not in q.get("question", "").lower()]
+            deleted_count = original_count - len(questions)
+            
+            if deleted_count == 0:
+                return f"未找到包含关键词 '{keyword}' 的题目"
+            
+            # 写回文件
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(questions, f, ensure_ascii=False, indent=2)
+            
+            return f"已删除 {deleted_count} 道题目，当前共有 {len(questions)} 道题目"
+        except Exception as e:
+            raise Exception(f"删除JSON文件失败: {str(e)}")
+    
+    def _list_quiz_questions(self) -> Tuple[str, Any]:
+        """列出题库中的题目"""
+        try:
+            quiz = None
+            
+            if hasattr(self.ai, 'astronomy_quiz'):
+                quiz = self.ai.astronomy_quiz
+            
+            if not quiz:
+                # 导入需要的类
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                from xiaotian.tools.astronomy_quiz import AstronomyQuiz
+                quiz = AstronomyQuiz(self, self.ai)
+            
+            # 获取题目统计
+            stats = quiz.get_question_bank_stats()
+            return (f"📊 {stats}", None)
+        except Exception as e:
+            return (f"❌ 获取题库统计失败: {str(e)}", None)

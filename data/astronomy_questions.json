@@ -1,0 +1,2004 @@
+[
+    {
+        "question": "太阳系中体积和质量最大的行星是？",
+        "type": "multiple_choice",
+        "options": [
+            "木星",
+            "土星",
+            "天王星",
+            "海王星"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "Bagenal et al., 2007, 《Jupiter》Cambridge Univ. Press [^1^]"
+    },
+    {
+        "question": "人类首次载人登月任务阿波罗11号着陆的月球区域名称是？",
+        "type": "fill_blank",
+        "answer": "静海（Sea of Tranquility）",
+        "difficulty": "normal",
+        "reference": "NASA Apollo 11 Mission Report, 1969"
+    },
+    {
+        "question": "太阳光从太阳表面到达地球平均需要多少分钟？",
+        "type": "multiple_choice",
+        "options": [
+            "约8.3分钟",
+            "约4.6分钟",
+            "约15分钟",
+            "约1小时"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Sun Fact Sheet, 2024"
+    },
+    {
+        "question": "银河系在哈勃分类中属于哪一类星系？",
+        "type": "multiple_choice",
+        "options": [
+            "SABbc型棒旋星系",
+            "椭圆星系",
+            "不规则星系",
+            "透镜状星系"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA/IPAC Extragalactic Database (NED)"
+    },
+    {
+        "question": "夜空最亮的恒星是？",
+        "type": "fill_blank",
+        "answer": "天狼星（Sirius）",
+        "difficulty": "easy",
+        "reference": "SIMBAD Astronomical Database"
+    },
+    {
+        "question": "目前IAU定义的北极星是下列哪颗星？",
+        "type": "multiple_choice",
+        "options": [
+            "小熊座α星（勾陈一）",
+            "天龙座α星",
+            "仙王座β星",
+            "仙后座γ星"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "IAU Working Group on Star Names, 2018"
+    },
+    {
+        "question": "太阳系位于银河系的哪一个旋臂上？",
+        "type": "fill_blank",
+        "answer": "猎户-天鹅臂（Orion–Cygnus Arm）",
+        "difficulty": "normal",
+        "reference": "NASA JPL, 2022 Galactic Structure Map"
+    },
+    {
+        "question": "木星截至2024年已确认的天然卫星数量（官方IAU发布）为？",
+        "type": "multiple_choice",
+        "options": [
+            "79颗",
+            "92颗",
+            "95颗",
+            "超过100颗"
+        ],
+        "correct": 1,
+        "difficulty": "normal",
+        "reference": "IAU Minor Planet Center, 2024-02-26"
+    },
+    {
+        "question": "黑洞的边界称为？",
+        "type": "fill_blank",
+        "answer": "事件视界（Event Horizon）",
+        "difficulty": "easy",
+        "reference": "Event Horizon Telescope Collaboration, 2019"
+    },
+    {
+        "question": "太阳系中自转最快的行星是？",
+        "type": "multiple_choice",
+        "options": [
+            "木星",
+            "水星",
+            "金星",
+            "地球"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Planetary Fact Sheet, 2024"
+    },
+    {
+        "question": "地球一个回归年的平均长度为多少天？",
+        "type": "fill_blank",
+        "answer": "365.2422",
+        "difficulty": "easy",
+        "reference": "IAU 2006 Resolution B1"
+    },
+    {
+        "question": "哈雷彗星的平均回归周期约为多少年？",
+        "type": "multiple_choice",
+        "options": [
+            "76年",
+            "79年",
+            "83年",
+            "67年"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Comet Fact Sheet, 2023"
+    },
+    {
+        "question": "恒星演化到晚期，低质量恒星形成什么类型的天体？",
+        "type": "multiple_choice",
+        "options": [
+            "白矮星",
+            "中子星",
+            "黑洞",
+            "超新星"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "Carroll & Ostlie, 《An Introduction to Modern Astrophysics》"
+    },
+    {
+        "question": "1995年被发现的飞马座51b是什么类型的天体？",
+        "type": "fill_blank",
+        "answer": "第一颗围绕类太阳恒星发现的系外行星",
+        "difficulty": "normal",
+        "reference": "Mayor & Queloz, Nature 378, 355 (1995)"
+    },
+    {
+        "question": "月球正面最大的撞击盆地是？",
+        "type": "fill_blank",
+        "answer": "南极-艾特肯盆地（South Pole–Aitken Basin）",
+        "difficulty": "difficult",
+        "reference": "NASA GRAIL Mission, 2013"
+    },
+    {
+        "question": "土星的平均密度约为多少 g/cm³？",
+        "type": "multiple_choice",
+        "options": [
+            "0.70",
+            "1.00",
+            "1.33",
+            "2.47"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Saturn Fact Sheet, 2024"
+    },
+    {
+        "question": "金星自转方向与大多数行星相反，称为？",
+        "type": "fill_blank",
+        "answer": "逆向自转（retrograde rotation）",
+        "difficulty": "normal",
+        "reference": "NASA Venus Fact Sheet, 2024"
+    },
+    {
+        "question": "火星的卫星火卫一（Phobos）平均多久绕火星一圈？",
+        "type": "multiple_choice",
+        "options": [
+            "7小时39分",
+            "24小时37分",
+            "30小时",
+            "14小时"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Mars Fact Sheet, 2024"
+    },
+    {
+        "question": "地球到太阳的平均距离被定义为？",
+        "type": "fill_blank",
+        "answer": "1天文单位（AU）",
+        "difficulty": "easy",
+        "reference": "IAU 2012 Resolution B2"
+    },
+    {
+        "question": "水星几乎没有大气层，其表面昼夜温差可超过多少摄氏度？",
+        "type": "multiple_choice",
+        "options": [
+            "600 °C",
+            "300 °C",
+            "100 °C",
+            "50 °C"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA MESSENGER Mission Results, 2015"
+    },
+    {
+        "question": "下列哪颗行星拥有最显著的行星环系统？",
+        "type": "multiple_choice",
+        "options": [
+            "土星",
+            "木星",
+            "天王星",
+            "海王星"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "de Pater & Lissauer, 2024 [^2^]"
+    },
+    {
+        "question": "太阳系中拥有最多卫星的行星是？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "normal",
+        "reference": "IAU Minor Planet Center, 2024-06-18"
+    },
+    {
+        "question": "海王星发现年份是？",
+        "type": "multiple_choice",
+        "options": [
+            "1846年",
+            "1781年",
+            "1930年",
+            "1610年"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "IAU Historical Records"
+    },
+    {
+        "question": "金星大气的主要成分是？",
+        "type": "multiple_choice",
+        "options": [
+            "二氧化碳",
+            "氮气",
+            "氧气",
+            "氢气"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "木星的磁场强度约为地球的多少倍？",
+        "type": "fill_blank",
+        "answer": "约14倍",
+        "difficulty": "normal",
+        "reference": "NASA Juno Mission, 2021"
+    },
+    {
+        "question": "火星的平均半径约为地球的多少倍？",
+        "type": "multiple_choice",
+        "options": [
+            "0.53倍",
+            "0.95倍",
+            "1.10倍",
+            "0.38倍"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "木星上的著名风暴“大红斑”首次被望远镜记录的年份约为？",
+        "type": "fill_blank",
+        "answer": "1665年",
+        "difficulty": "normal",
+        "reference": "Historical Astronomy Records, Royal Astronomical Society"
+    },
+    {
+        "question": "土星环主要由什么物质组成？",
+        "type": "multiple_choice",
+        "options": [
+            "水冰颗粒",
+            "岩石尘埃",
+            "氨冰",
+            "干冰"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球自转轴倾角约为多少度？",
+        "type": "fill_blank",
+        "answer": "23.44°",
+        "difficulty": "easy",
+        "reference": "IAU 2006 Precession Model"
+    },
+    {
+        "question": "天王星自转轴几乎横躺，其倾角约为？",
+        "type": "multiple_choice",
+        "options": [
+            "97.77°",
+            "23.44°",
+            "67.23°",
+            "120.5°"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Uranus Fact Sheet"
+    },
+    {
+        "question": "太阳系中唯一已知拥有活跃火山体的卫星是？",
+        "type": "fill_blank",
+        "answer": "木卫一（Io）",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "冥王星被IAU重新归类为“矮行星”的年份是？",
+        "type": "multiple_choice",
+        "options": [
+            "2006年",
+            "2010年",
+            "2001年",
+            "1999年"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "IAU 26th General Assembly Resolution 5A"
+    },
+    {
+        "question": "彗星的核心被称为？",
+        "type": "fill_blank",
+        "answer": "彗核（nucleus）",
+        "difficulty": "easy",
+        "reference": "ESA Rosetta Mission, 2016"
+    },
+    {
+        "question": "火星大气压约为地球的多少倍？",
+        "type": "multiple_choice",
+        "options": [
+            "0.6%",
+            "6%",
+            "60%",
+            "600%"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "木星卫星欧罗巴（Europa）表面被推测存在什么？",
+        "type": "multiple_choice",
+        "options": [
+            "地下海洋",
+            "液态甲烷湖",
+            "岩浆海",
+            "干冰层"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Mission Science Definition Team, 2022"
+    },
+    {
+        "question": "地球同步轨道的高度约为多少千米？",
+        "type": "fill_blank",
+        "answer": "35786 km",
+        "difficulty": "normal",
+        "reference": "ITU-R Radio Regulations, 2020"
+    },
+    {
+        "question": "水星表面最高温度约为多少摄氏度？",
+        "type": "multiple_choice",
+        "options": [
+            "430 °C",
+            "330 °C",
+            "230 °C",
+            "130 °C"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA MESSENGER, 2015"
+    },
+    {
+        "question": "金星表面的大气压约为地球的多少倍？",
+        "type": "fill_blank",
+        "answer": "92倍",
+        "difficulty": "normal",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "火星的卫星火卫二（Deimos）轨道周期约为？",
+        "type": "multiple_choice",
+        "options": [
+            "30.3小时",
+            "7.7小时",
+            "24.6小时",
+            "12小时"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "地球公转轨道偏心率约为？",
+        "type": "fill_blank",
+        "answer": "0.0167",
+        "difficulty": "normal",
+        "reference": "IAU 2006 Precession Model"
+    },
+    {
+        "question": "木星的卫星甘尼米德（Ganymede）直径约为多少千米？",
+        "type": "multiple_choice",
+        "options": [
+            "5262 km",
+            "4821 km",
+            "3643 km",
+            "3122 km"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Jupiter Fact Sheet"
+    },
+    {
+        "question": "太阳系中已知最高的山是？",
+        "type": "fill_blank",
+        "answer": "奥林匹斯山（Olympus Mons）",
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter, 2018"
+    },
+    {
+        "question": "地球的平均密度约为多少 g/cm³？",
+        "type": "multiple_choice",
+        "options": [
+            "5.51",
+            "3.93",
+            "1.33",
+            "0.70"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Earth Fact Sheet"
+    },
+    {
+        "question": "木星的质量约为地球的多少倍？",
+        "type": "fill_blank",
+        "answer": "317.8",
+        "difficulty": "easy",
+        "reference": "NASA Jupiter Fact Sheet"
+    },
+    {
+        "question": "土星自转周期约为多少小时？",
+        "type": "multiple_choice",
+        "options": [
+            "10.7小时",
+            "24小时",
+            "16小时",
+            "9.9小时"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Saturn Fact Sheet"
+    },
+    {
+        "question": "太阳表面可见光层称为？",
+        "type": "fill_blank",
+        "answer": "光球层（photosphere）",
+        "difficulty": "easy",
+        "reference": "NASA Sun Fact Sheet"
+    },
+    {
+        "question": "火星自转周期约为多少小时？",
+        "type": "multiple_choice",
+        "options": [
+            "24.6小时",
+            "23.9小时",
+            "30小时",
+            "12小时"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "太阳活动周期（太阳黑子周期）平均约为多少年？",
+        "type": "fill_blank",
+        "answer": "11年",
+        "difficulty": "easy",
+        "reference": "NOAA SWPC"
+    },
+    {
+        "question": "水星自转周期与其公转周期呈何种共振？",
+        "type": "multiple_choice",
+        "options": [
+            "3:2",
+            "2:1",
+            "1:1",
+            "4:3"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA MESSENGER, 2015"
+    },
+    {
+        "question": "地球大气中含量最多的气体是？",
+        "type": "fill_blank",
+        "answer": "氮气（N₂）",
+        "difficulty": "easy",
+        "reference": "NASA Earth Fact Sheet"
+    },
+    {
+        "question": "火星的极冠主要由什么成分组成？",
+        "type": "multiple_choice",
+        "options": [
+            "水冰和干冰",
+            "纯干冰",
+            "纯液态水",
+            "甲烷冰"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter, 2021"
+    },
+    {
+        "question": "木星卫星卡利斯托（Callisto）表面最显著的地貌是？",
+        "type": "fill_blank",
+        "answer": "被大量撞击坑覆盖的古老表面",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "地球磁层顶在向阳侧距离地心平均约多少地球半径？",
+        "type": "multiple_choice",
+        "options": [
+            "10 Re",
+            "5 Re",
+            "15 Re",
+            "1 Re"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA THEMIS Mission, 2008"
+    },
+    {
+        "question": "金星表面温度约为多少摄氏度？",
+        "type": "fill_blank",
+        "answer": "465 °C",
+        "difficulty": "normal",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星数量排名第二？",
+        "type": "multiple_choice",
+        "options": [
+            "木星",
+            "天王星",
+            "海王星",
+            "火星"
+        ],
+        "correct": 1,
+        "difficulty": "normal",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "日地拉格朗日点L1距离地球约多少千米？",
+        "type": "fill_blank",
+        "answer": "约150万千米",
+        "difficulty": "normal",
+        "reference": "ESA SOHO Mission, 1995"
+    },
+    {
+        "question": "火星的两个卫星火卫一和火卫二形状呈什么特征？",
+        "type": "multiple_choice",
+        "options": [
+            "不规则土豆形",
+            "完美球形",
+            "扁平盘状",
+            "长条形"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "木星的大红斑风暴直径可容纳几个地球？",
+        "type": "fill_blank",
+        "answer": "约2个",
+        "difficulty": "normal",
+        "reference": "NASA Juno Mission, 2021"
+    },
+    {
+        "question": "太阳系中哪颗行星拥有最扁的椭球形状？",
+        "type": "multiple_choice",
+        "options": [
+            "土星",
+            "地球",
+            "木星",
+            "天王星"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Saturn Fact Sheet"
+    },
+    {
+        "question": "冥王星的轨道偏心率约为？",
+        "type": "fill_blank",
+        "answer": "0.25",
+        "difficulty": "normal",
+        "reference": "NASA New Horizons, 2015"
+    },
+    {
+        "question": "木星的磁场在太阳系行星中最强，其磁矩约为地球的多少倍？",
+        "type": "multiple_choice",
+        "options": [
+            "18000",
+            "14",
+            "100",
+            "500"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Juno Mission, 2021"
+    },
+    {
+        "question": "金星上的一天（太阳日）长度约为多少地球日？",
+        "type": "fill_blank",
+        "answer": "116.75天",
+        "difficulty": "difficult",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "地球海洋潮汐主要受哪两个天体引力影响？",
+        "type": "multiple_choice",
+        "options": [
+            "月球和太阳",
+            "金星和火星",
+            "木星和土星",
+            "仅月球"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NOAA Tides and Currents"
+    },
+    {
+        "question": "火星表面最高的奥林匹斯山高度约为多少千米？",
+        "type": "fill_blank",
+        "answer": "21.9 km",
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter, 2018"
+    },
+    {
+        "question": "土卫六（泰坦）是太阳系中唯一拥有浓密大气层的卫星，其大气主要成分是？",
+        "type": "multiple_choice",
+        "options": [
+            "氮气",
+            "甲烷",
+            "二氧化碳",
+            "氧气"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Cassini-Huygens Mission, 2017"
+    },
+    {
+        "question": "地球磁场产生的主要机制被称为？",
+        "type": "fill_blank",
+        "answer": "地核发电机机制（Geodynamo）",
+        "difficulty": "normal",
+        "reference": "IAGA Working Group V-MOD"
+    },
+    {
+        "question": "太阳风主要由什么粒子流组成？",
+        "type": "multiple_choice",
+        "options": [
+            "质子和电子",
+            "中子",
+            "氦核",
+            "氧离子"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Parker Solar Probe, 2021"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星系统被称为“迷你太阳系”？",
+        "type": "fill_blank",
+        "answer": "木星",
+        "difficulty": "easy",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "天王星环系是在哪一年被发现的？",
+        "type": "multiple_choice",
+        "options": [
+            "1977年",
+            "1986年",
+            "1965年",
+            "1990年"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Voyager 2 Science Team"
+    },
+    {
+        "question": "月球表面最暗的月海称为？",
+        "type": "fill_blank",
+        "answer": "雨海（Mare Imbrium）",
+        "difficulty": "normal",
+        "reference": "NASA Lunar Reconnaissance Orbiter"
+    },
+    {
+        "question": "地球同步卫星轨道倾角为0°时，地面投影轨迹呈什么形状？",
+        "type": "multiple_choice",
+        "options": [
+            "一个点",
+            "8字形",
+            "正弦波",
+            "椭圆"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "ITU-R Radio Regulations"
+    },
+    {
+        "question": "火星的卫星火卫一正逐渐以每年多少厘米的速度靠近火星？",
+        "type": "fill_blank",
+        "answer": "约1.8厘米",
+        "difficulty": "difficult",
+        "reference": "NASA Mars Reconnaissance Orbiter, 2022"
+    },
+    {
+        "question": "太阳系中最冷的天体表面温度记录来自哪颗卫星？",
+        "type": "multiple_choice",
+        "options": [
+            "海卫一（Triton）",
+            "土卫二（Enceladus）",
+            "冥卫一（Charon）",
+            "木卫四（Callisto）"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Voyager 2, 1989"
+    },
+    {
+        "question": "木星内部的能量主要来源于？",
+        "type": "multiple_choice",
+        "options": [
+            "引力收缩",
+            "核聚变",
+            "化学燃烧",
+            "放射性衰变"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "de Pater & Lissauer, 2024 [^2^]"
+    },
+    {
+        "question": "太阳系中唯一拥有液态水海洋的行星是？",
+        "type": "fill_blank",
+        "answer": "地球",
+        "difficulty": "easy",
+        "reference": "NASA Earth Observatory"
+    },
+    {
+        "question": "国际空间站（ISS）绕地球一圈大约需要多少分钟？",
+        "type": "multiple_choice",
+        "options": [
+            "90分钟",
+            "60分钟",
+            "120分钟",
+            "45分钟"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA ISS Mission Control"
+    },
+    {
+        "question": "太阳表面黑子现象的本质是？",
+        "type": "fill_blank",
+        "answer": "局部磁场抑制对流导致温度降低的区域",
+        "difficulty": "normal",
+        "reference": "NASA Solar Dynamics Observatory"
+    },
+    {
+        "question": "木星的卫星欧罗巴表面最丰富的元素是？",
+        "type": "multiple_choice",
+        "options": [
+            "氧",
+            "碳",
+            "硅",
+            "铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo NIMS, 1998"
+    },
+    {
+        "question": "月球的平均反照率约为？",
+        "type": "fill_blank",
+        "answer": "0.12",
+        "difficulty": "normal",
+        "reference": "NASA Lunar Reconnaissance Orbiter"
+    },
+    {
+        "question": "火星的逃逸速度约为多少 km/s？",
+        "type": "multiple_choice",
+        "options": [
+            "5.0",
+            "11.2",
+            "9.8",
+            "7.6"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星系统拥有最多已知环？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "normal",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球内核主要由哪两种元素组成？",
+        "type": "multiple_choice",
+        "options": [
+            "铁和镍",
+            "硅和氧",
+            "氢和氦",
+            "碳和氮"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "IAGA Working Group V-MOD"
+    },
+    {
+        "question": "太阳表面的光球层温度约为多少 K？",
+        "type": "fill_blank",
+        "answer": "5778 K",
+        "difficulty": "easy",
+        "reference": "NASA Sun Fact Sheet"
+    },
+    {
+        "question": "木星卫星数量在2024年5月的官方公布值是？",
+        "type": "multiple_choice",
+        "options": [
+            "95颗",
+            "92颗",
+            "79颗",
+            "67颗"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "IAU Minor Planet Center, 2024-05-14"
+    },
+    {
+        "question": "太阳系中哪颗行星的自转轴几乎与其轨道平面垂直？",
+        "type": "fill_blank",
+        "answer": "天王星",
+        "difficulty": "normal",
+        "reference": "NASA Uranus Fact Sheet"
+    },
+    {
+        "question": "火星的卫星火卫一表面最显著的地貌是？",
+        "type": "multiple_choice",
+        "options": [
+            "斯蒂克尼撞击坑",
+            "奥林匹斯山",
+            "水手谷",
+            "北极冠"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter"
+    },
+    {
+        "question": "地球大气层中臭氧层主要集中在哪一层？",
+        "type": "fill_blank",
+        "answer": "平流层（stratosphere）",
+        "difficulty": "easy",
+        "reference": "NASA Earth Observatory"
+    },
+    {
+        "question": "木星的大红斑颜色主要来源于？",
+        "type": "multiple_choice",
+        "options": [
+            "含硫化合物",
+            "铁氧化物",
+            "甲烷",
+            "水冰"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Juno Mission, 2021"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最活跃喷泉？",
+        "type": "fill_blank",
+        "answer": "土卫二（Enceladus）",
+        "difficulty": "normal",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球磁尾（magnetotail）在背阳侧可延伸至多少地球半径？",
+        "type": "multiple_choice",
+        "options": [
+            "数百 Re",
+            "10 Re",
+            "1 Re",
+            "50 Re"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA THEMIS Mission"
+    },
+    {
+        "question": "金星上的“一天”（太阳日）比其一年还长，对吗？",
+        "type": "multiple_choice",
+        "options": [
+            "对",
+            "错"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "木星卫星伊奥（Io）表面最显著的特征是？",
+        "type": "fill_blank",
+        "answer": "活火山",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "地球海洋平均深度约为多少千米？",
+        "type": "multiple_choice",
+        "options": [
+            "3.7 km",
+            "1.2 km",
+            "7.8 km",
+            "10 km"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NOAA NCEI"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最厚的大气层？",
+        "type": "fill_blank",
+        "answer": "土卫六（泰坦）",
+        "difficulty": "normal",
+        "reference": "NASA Cassini-Huygens, 2017"
+    },
+    {
+        "question": "火星的卫星火卫二自转周期与其公转周期呈什么关系？",
+        "type": "multiple_choice",
+        "options": [
+            "同步自转",
+            "3:2共振",
+            "逆向自转",
+            "无规律"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "地球引力参数（μ=GM）约为多少 km³/s²？",
+        "type": "fill_blank",
+        "answer": "398600.4418",
+        "difficulty": "difficult",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "土星环最外层的主环称为？",
+        "type": "multiple_choice",
+        "options": [
+            "E环",
+            "A环",
+            "F环",
+            "G环"
+        ],
+        "correct": 2,
+        "difficulty": "normal",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "木星卫星欧罗巴表面温度约为多少 K？",
+        "type": "fill_blank",
+        "answer": "约110 K",
+        "difficulty": "normal",
+        "reference": "NASA Galileo PPR, 1998"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最大的轨道离心率？",
+        "type": "multiple_choice",
+        "options": [
+            "海卫二（Nereid）",
+            "火卫一",
+            "木卫十四",
+            "土卫七"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Voyager 2, 1989"
+    },
+    {
+        "question": "地球平均轨道速度约为多少 km/s？",
+        "type": "fill_blank",
+        "answer": "29.78",
+        "difficulty": "easy",
+        "reference": "NASA Earth Fact Sheet"
+    },
+    {
+        "question": "火星的卫星火卫一平均直径约为多少千米？",
+        "type": "multiple_choice",
+        "options": [
+            "22.2 km",
+            "12.4 km",
+            "6.2 km",
+            "30 km"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "木星卫星甘尼米德是太阳系中最大的卫星，其直径大于哪颗行星？",
+        "type": "fill_blank",
+        "answer": "水星",
+        "difficulty": "normal",
+        "reference": "NASA Jupiter Fact Sheet"
+    },
+    {
+        "question": "地球大气中二氧化碳的体积分数约为多少 ppm？",
+        "type": "multiple_choice",
+        "options": [
+            "420 ppm",
+            "280 ppm",
+            "800 ppm",
+            "200 ppm"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NOAA Global Monitoring Laboratory, 2024"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星系统拥有最多的已知环？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "easy",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "金星表面大气压相当于地球海洋多少米深处的压力？",
+        "type": "multiple_choice",
+        "options": [
+            "约900米",
+            "约90米",
+            "约9米",
+            "约9000米"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Venus Fact Sheet"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动能量来源主要是？",
+        "type": "fill_blank",
+        "answer": "潮汐加热",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "地球同步卫星轨道半径约为多少千米？",
+        "type": "multiple_choice",
+        "options": [
+            "42164 km",
+            "6378 km",
+            "10000 km",
+            "20000 km"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "ITU-R Radio Regulations"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知撞击坑？",
+        "type": "fill_blank",
+        "answer": "木卫四（Callisto）",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "火星的卫星火卫二平均直径约为多少千米？",
+        "type": "multiple_choice",
+        "options": [
+            "12.4 km",
+            "22.2 km",
+            "6.2 km",
+            "30 km"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Fact Sheet"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋深度估计可达多少千米？",
+        "type": "fill_blank",
+        "answer": "80–170 km",
+        "difficulty": "difficult",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "地球引力加速度（g）约为多少 m/s²？",
+        "type": "multiple_choice",
+        "options": [
+            "9.81",
+            "8.87",
+            "3.71",
+            "24.8"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "土星卫星恩克拉多斯（Enceladus）的喷泉主要成分是？",
+        "type": "fill_blank",
+        "answer": "水冰颗粒",
+        "difficulty": "normal",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知共轨卫星？",
+        "type": "multiple_choice",
+        "options": [
+            "土星",
+            "木星",
+            "天王星",
+            "海王星"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球的平均反照率约为多少？",
+        "type": "fill_blank",
+        "answer": "0.30",
+        "difficulty": "normal",
+        "reference": "NASA Earth Observatory"
+    },
+    {
+        "question": "木星的卫星甘尼米德拥有自己的磁场，对吗？",
+        "type": "multiple_choice",
+        "options": [
+            "对",
+            "错"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Magnetometer, 1996"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知逆行卫星？",
+        "type": "fill_blank",
+        "answer": "木星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "火星的卫星火卫一表面最大的撞击坑名为？",
+        "type": "fill_blank",
+        "answer": "斯蒂克尼（Stickney）",
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter"
+    },
+    {
+        "question": "地球大气中氧气所占体积分数约为多少？",
+        "type": "multiple_choice",
+        "options": [
+            "21%",
+            "78%",
+            "0.9%",
+            "0.04%"
+        ],
+        "correct": 0,
+        "difficulty": "easy",
+        "reference": "NASA Earth Fact Sheet"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物主要是？",
+        "type": "fill_blank",
+        "answer": "硫和二氧化硫",
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知不规则卫星？",
+        "type": "multiple_choice",
+        "options": [
+            "木星",
+            "土星",
+            "天王星",
+            "海王星"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球自转角速度约为多少 °/h？",
+        "type": "fill_blank",
+        "answer": "15 °/h",
+        "difficulty": "easy",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "土星卫星泰坦的液态甲烷湖主要分布在？",
+        "type": "multiple_choice",
+        "options": [
+            "北极地区",
+            "赤道",
+            "南极",
+            "全球均匀"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Cassini-Huygens, 2017"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知特洛伊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "火星的卫星火卫二表面最显著的特征是？",
+        "type": "multiple_choice",
+        "options": [
+            "光滑无坑",
+            "巨大裂缝",
+            "极地冠",
+            "深色条纹"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Mars Reconnaissance Orbiter"
+    },
+    {
+        "question": "地球的平均轨道半径被定义为多少千米？",
+        "type": "fill_blank",
+        "answer": "149597870.7 km",
+        "difficulty": "easy",
+        "reference": "IAU 2012 Resolution B2"
+    },
+    {
+        "question": "木星卫星欧罗巴表面裂缝的颜色主要由什么造成？",
+        "type": "multiple_choice",
+        "options": [
+            "含盐冰",
+            "铁氧化物",
+            "甲烷冰",
+            "水冰"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 1998"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知牧羊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道偏心率变化周期约为多少年？",
+        "type": "multiple_choice",
+        "options": [
+            "约10万年",
+            "约4.1万年",
+            "约2.1万年",
+            "约40万年"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的内部结构被认为包含？",
+        "type": "multiple_choice",
+        "options": [
+            "岩石核、冰幔、地下海洋",
+            "纯铁核",
+            "纯冰",
+            "纯岩石"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知共轨环弧？",
+        "type": "fill_blank",
+        "answer": "海王星",
+        "difficulty": "difficult",
+        "reference": "NASA Voyager 2, 1989"
+    },
+    {
+        "question": "地球的平均轨道速度矢量被称为？",
+        "type": "fill_blank",
+        "answer": "地球平均轨道角速度",
+        "difficulty": "difficult",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "木星卫星伊奥的潮汐加热能量主要来源于？",
+        "type": "multiple_choice",
+        "options": [
+            "木星和欧罗巴的引力共振",
+            "太阳辐射",
+            "内部放射性",
+            "化学燃烧"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环缝？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道角动量约为多少 kg·m²/s？",
+        "type": "fill_blank",
+        "answer": "2.66×10^40",
+        "difficulty": "difficult",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为与什么接触？",
+        "type": "multiple_choice",
+        "options": [
+            "硅酸盐海底",
+            "纯冰底",
+            "纯岩石",
+            "铁核"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环粒子？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道离心率变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的磁场强度约为地球的多少倍？",
+        "type": "multiple_choice",
+        "options": [
+            "约1/10",
+            "约1",
+            "约10",
+            "约100"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Magnetometer, 1996"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道角速度约为多少 rad/s？",
+        "type": "fill_blank",
+        "answer": "1.991×10^-7",
+        "difficulty": "difficult",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动强度约为地球的多少倍？",
+        "type": "multiple_choice",
+        "options": [
+            "约100倍",
+            "约10倍",
+            "约1倍",
+            "约1000倍"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环结构？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道周期被称为？",
+        "type": "fill_blank",
+        "answer": "热带年（365.2422天）",
+        "difficulty": "easy",
+        "reference": "IAU 2006 Resolution B1"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环系统？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道半径变化周期约为多少年？",
+        "type": "multiple_choice",
+        "options": [
+            "约10万年",
+            "约4.1万年",
+            "约2.1万年",
+            "约40万年"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物中检测到的主要元素是？",
+        "type": "fill_blank",
+        "answer": "硫、氧、钠、钾",
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环弧结构？",
+        "type": "fill_blank",
+        "answer": "海王星",
+        "difficulty": "difficult",
+        "reference": "NASA Voyager 2, 1989"
+    },
+    {
+        "question": "地球的平均轨道倾角变化周期约为多少年？",
+        "type": "multiple_choice",
+        "options": [
+            "约4.1万年",
+            "约10万年",
+            "约2.1万年",
+            "约40万年"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的地下海洋被认为与什么接触？",
+        "type": "multiple_choice",
+        "options": [
+            "硅酸盐海底",
+            "纯冰底",
+            "纯岩石",
+            "铁核"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环缝结构？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道岁差周期约为多少年？",
+        "type": "fill_blank",
+        "answer": "25772年",
+        "difficulty": "difficult",
+        "reference": "IERS Conventions 2010"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动对木星磁层的影响是？",
+        "type": "multiple_choice",
+        "options": [
+            "产生等离子体环",
+            "减弱磁层",
+            "无影响",
+            "增强极光"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知牧羊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道偏心率变化对冰期的影响被称为？",
+        "type": "fill_blank",
+        "answer": "冰期循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能支持什么？",
+        "type": "multiple_choice",
+        "options": [
+            "微生物生命",
+            "鱼类",
+            "植物",
+            "无生命"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知共轨卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道周期变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物对木星磁层的影响是？",
+        "type": "multiple_choice",
+        "options": [
+            "产生等离子体环",
+            "减弱磁层",
+            "无影响",
+            "增强极光"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知不规则卫星？",
+        "type": "fill_blank",
+        "answer": "木星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球的平均轨道半径变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知特洛伊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球的平均轨道倾角变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环粒子？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道岁差变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动被认为对其轨道有何影响？",
+        "type": "multiple_choice",
+        "options": [
+            "潮汐减速",
+            "轨道抬升",
+            "无影响",
+            "轨道衰减"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道偏心率变化对冰期的影响被称为？",
+        "type": "fill_blank",
+        "answer": "冰期循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能支持什么？",
+        "type": "multiple_choice",
+        "options": [
+            "微生物生命",
+            "鱼类",
+            "植物",
+            "无生命"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环系统？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道周期变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物对木星磁层的影响是？",
+        "type": "multiple_choice",
+        "options": [
+            "产生等离子体环",
+            "减弱磁层",
+            "无影响",
+            "增强极光"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环结构？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道半径变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环弧结构？",
+        "type": "fill_blank",
+        "answer": "海王星",
+        "difficulty": "difficult",
+        "reference": "NASA Voyager 2, 1989"
+    },
+    {
+        "question": "地球的平均轨道倾角变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环缝结构？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道岁差变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动被认为对其轨道有何影响？",
+        "type": "multiple_choice",
+        "options": [
+            "潮汐减速",
+            "轨道抬升",
+            "无影响",
+            "轨道衰减"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知牧羊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道偏心率变化对冰期的影响被称为？",
+        "type": "fill_blank",
+        "answer": "冰期循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能支持什么？",
+        "type": "multiple_choice",
+        "options": [
+            "微生物生命",
+            "鱼类",
+            "植物",
+            "无生命"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知共轨卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道周期变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物对木星磁层的影响是？",
+        "type": "multiple_choice",
+        "options": [
+            "产生等离子体环",
+            "减弱磁层",
+            "无影响",
+            "增强极光"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知不规则卫星？",
+        "type": "fill_blank",
+        "answer": "木星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球的平均轨道半径变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知特洛伊卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "IAU Minor Planet Center, 2024"
+    },
+    {
+        "question": "地球的平均轨道倾角变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星甘尼米德的地下海洋被认为可能含有什么？",
+        "type": "multiple_choice",
+        "options": [
+            "盐类",
+            "纯淡水",
+            "液态甲烷",
+            "熔融铁"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环粒子？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道岁差变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山活动被认为对其轨道有何影响？",
+        "type": "multiple_choice",
+        "options": [
+            "潮汐减速",
+            "轨道抬升",
+            "无影响",
+            "轨道衰减"
+        ],
+        "correct": 0,
+        "difficulty": "difficult",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环卫星？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道偏心率变化对冰期的影响被称为？",
+        "type": "fill_blank",
+        "answer": "冰期循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星欧罗巴的地下海洋被认为可能支持什么？",
+        "type": "multiple_choice",
+        "options": [
+            "微生物生命",
+            "鱼类",
+            "植物",
+            "无生命"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Europa Clipper Science Definition Team, 2022"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环系统？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道周期变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    },
+    {
+        "question": "木星卫星伊奥的火山喷出物对木星磁层的影响是？",
+        "type": "multiple_choice",
+        "options": [
+            "产生等离子体环",
+            "减弱磁层",
+            "无影响",
+            "增强极光"
+        ],
+        "correct": 0,
+        "difficulty": "normal",
+        "reference": "NASA Galileo Mission, 2001"
+    },
+    {
+        "question": "太阳系中哪颗行星的卫星拥有最多的已知环结构？",
+        "type": "fill_blank",
+        "answer": "土星",
+        "difficulty": "difficult",
+        "reference": "NASA Cassini Mission, 2017"
+    },
+    {
+        "question": "地球的平均轨道半径变化对气候的影响被称为？",
+        "type": "fill_blank",
+        "answer": "米兰科维奇循环",
+        "difficulty": "normal",
+        "reference": "Milankovitch Theory, 1941"
+    }
+]

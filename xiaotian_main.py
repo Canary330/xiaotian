@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Set
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 导入NcatBot相关库
-from ncatbot.core import BotClient, GroupMessage, PrivateMessage, Request
+from ncatbot.core import BotClient, GroupMessage, PrivateMessage, Request, At
 from ncatbot.utils import get_log
 
 # 导入小天相关模块
@@ -129,8 +129,12 @@ class XiaotianQQBot:
         
         # 注册群聊消息处理
         self.bot.add_group_event_handler(self.on_group_message)
+        
         # 注册请求处理（好友申请和群邀请）
         self.bot.add_request_event_handler(self.on_request)
+        
+        # 注册群组通知事件处理（如新成员入群）
+        self.bot.add_notice_event_handler(self.on_group_notice)
     
     def handle_response(self, response:str, user_id: str, group_id: str = None) -> tuple:
         # 尝试解析AI回复中的JSON信息并处理
@@ -293,7 +297,7 @@ class XiaotianQQBot:
             try:
                 image_data = None
 
-                # 处理消息（传入群组ID以支持分别记忆）
+                # 处理消息
                 response = self.scheduler.process_message(user_id, msg.raw_message, group_id, image_data)
 
                 wait_time, cleaned_response, like_response = self.handle_response(response, user_id, group_id)
@@ -422,11 +426,12 @@ class XiaotianQQBot:
         
         self.root_id = root_id
         
-        if not os.getenv("MOONSHOT_API_KEY"):
-            self._log.error("❌ 请设置环境变量 MOONSHOT_API_KEY")
+        # 检查API密钥
+        if not os.getenv("DEEPSEEK_API_KEY"):
+            self._log.error("❌ 请设置环境变量 DEEPSEEK_API_KEY")
             return
-            
-        # 初始化调度器，传入QQ发送回调
+        
+        # 初始化AI和调度器
         self.ai = XiaotianAI()
         self.scheduler = XiaotianScheduler(root_id=root_id, qq_send_callback=self.qq_send_callback, ai = self.ai)
         
@@ -456,14 +461,51 @@ class XiaotianQQBot:
         default_image = os.path.join(images_dir, "default.jpg")
         if not os.path.exists(default_image):
             self._log.warning("⚠️ 默认图片 default.jpg 不存在，请添加")
-        
+                
         # 检查字体文件
         fonts_dir = "xiaotian/data/fonts"
-        required_fonts = ["title.ttf", "artistic.ttf", "text.TTF", "simhei.ttf"]
+        required_fonts = ["art.TTF", "ciyun.TTF", "default.ttf", "text.TTF"]
         for font in required_fonts:
             font_path = os.path.join(fonts_dir, font)
             if not os.path.exists(font_path):
                 self._log.warning(f"⚠️ 字体文件 {font} 不存在，将使用默认字体")
+
+    
+    async def on_group_notice(self, notice):
+        """
+        处理群组通知事件（如新成员入群）
+        
+        Args:
+            notice: 通知事件数据
+        """
+        self._log.info(f"收到群组通知: {notice}")
+        
+        # 检查是否是群成员增加通知
+        if notice.get("notice_type") == "group_increase":
+            group_id = str(notice.get("group_id"))
+            user_id = str(notice.get("user_id"))
+            self_id = str(notice.get("self_id"))  # 机器人自己的QQ号
+            
+            self._log.info(f"检测到新成员 {user_id} 加入群 {group_id}")
+            
+            # 如果是机器人自己被邀请入群，则不发送欢迎消息
+            if user_id == self_id:
+                self._log.info(f"机器人自己加入群 {group_id}，不发送欢迎消息")
+                return
+            
+            # 生成欢迎消息
+            welcome_message = self.scheduler.welcome_manager.process_group_increase_notice(notice)
+            
+            if welcome_message:
+                # 设置一个短暂的延迟，让新成员有时间看到入群提示
+                await asyncio.sleep(5)
+                
+                try:
+                    # 发送欢迎消息
+                    await self.bot.api.post_group_msg(group_id=int(group_id), text=welcome_message)
+                    self._log.info(f"已发送欢迎消息给新成员 {user_id} 在群 {group_id}")
+                except Exception as e:
+                    self._log.error(f"发送欢迎消息失败: {e}")
 
 
 def main():

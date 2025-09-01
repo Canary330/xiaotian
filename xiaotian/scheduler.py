@@ -1,11 +1,11 @@
 """
 小天的调度器模块
-负责定时任务和消息处理
+任务和消息处理
 """
 
 import os
 import re
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt, datetime, timedelta
 from threading import Thread
 from typing import List, Callable, Tuple, Optional, Any, Dict
 import time
@@ -15,13 +15,17 @@ import tempfile
 from .manage.config import (
     DAILY_WEATHER_TIME, TRIGGER_WORDS,
     DAILY_ASTRONOMY_TIME, MONTHLY_ASTRONOMY_TIME, CLEANUP_TIME,
+    MONTHLY_LIKE_REWARD_TIME, MAX_MEMORY_COUNT, MEMORY_FILE,
     DAILY_ASTRONOMY_MESSAGE
 )
 from .ai.ai_core import XiaotianAI
 
 from .tools.weather_tools import WeatherTools
 from .tools.astronomy import AstronomyPoster
+from .tools.astronomy_quiz import AstronomyQuiz
+from .tools.welcome import WelcomeManager
 from .manage.root_manager import RootManager
+from .manage.like_manager import LikeManager
 from .tools.message import MessageSender
 
 
@@ -87,6 +91,9 @@ class XiaotianScheduler:
         
         # 初始化新功能组件
         self.astronomy = AstronomyPoster(root_manager=self.root_manager)
+        self.astronomy_quiz = AstronomyQuiz(root_manager=self.root_manager, ai_core=ai)  # 初始化天文竞答
+        self.welcome_manager = WelcomeManager(root_manager=self.root_manager, ai=ai)  # 初始化欢迎管理器
+        self.like_manager = LikeManager(root_manager=self.root_manager, ai=ai)  # 初始化好感度管理器
         self.wait_for_wakeup = False
         self.wakeup_time = 0  # 唤醒时间戳
         self.waiting_time = 20  # 默认唤醒超时时间（20秒）
@@ -111,6 +118,39 @@ class XiaotianScheduler:
         """检查用户特殊提示词命令"""
         memory_key = self.ai._get_memory_key(user_id, group_id)
         
+        # 检查天文竞答命令
+        if message.strip().startswith("小天 天文竞答") and group_id:
+            # 只在群聊中开启竞答
+            question_count = 10  # 默认题目数量
+            
+            # 检查是否有指定题目数量
+            match = re.search(r"小天 天文竞答\s*(\d+)?", message.strip())
+            if match and match.group(1):
+                try:
+                    count = int(match.group(1))
+                    if 3 <= count <= 50:  # 限制范围在3-50之间
+                        question_count = count
+                    else:
+                        return f'{{"data": [{{"wait_time": 1, "content": "⚠️ 题目数量必须在3-50之间！将使用默认数量10题。"}}], "like": 0}}'
+                except ValueError:
+                    pass  # 解析失败，使用默认值
+                    
+            result, message = self.astronomy_quiz.start_quiz(group_id, question_count)
+            if message:
+                return f'{{"data": [{{"wait_time": 1, "content": "{result}"}}, {{"wait_time": 3, "content": "{message}"}}], "like": 0}}'
+            return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            
+        # 检查是否是竞答结束命令
+        if message.strip() in ["结算", "结束竞答"] and group_id and group_id in self.astronomy_quiz.active_quizzes:
+            result = self.astronomy_quiz.finish_quiz(group_id, user_id)
+            return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            
+        # 检查群组是否处于竞答模式，如果是则将所有消息视为答案
+        if group_id and group_id in self.astronomy_quiz.active_quizzes:
+            result = self.astronomy_quiz.process_answer(user_id, message, group_id)
+            if result:
+                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+                    
         # 检查更改性格命令
         if message.startswith("小天，更改性格"):
             # 检查用户like值是否达到条件
@@ -149,8 +189,21 @@ class XiaotianScheduler:
         elif message.startswith("小天，与") and ("对冲" in message):
             # 提取目标用户ID和对冲金额
             try:
-                import re
-                # 匹配"小天，与123456789对冲10"或"小天，与123456789对冲10 好感度"
+                # 首先尝试匹配CQ码格式的@用户 - [CQ:at,qq=123456789]
+                at_match = re.search(r'小天，与\s*\[CQ:at,qq=(\d+)\]\s*对冲\s*([0-9.]+)', message)
+                if at_match:
+                    # 直接从CQ码中提取QQ号
+                    target_user_id = at_match.group(1).strip()
+                    transfer_amount = float(at_match.group(2).strip())
+                    
+                    if target_user_id and transfer_amount > 0:
+                        # 调用AI的like值转移功能（指定金额）
+                        result = self.ai.transfer_like_value(memory_key, target_user_id, transfer_amount, group_id)
+                        return f'{{"wait_time": 3, "content": "{result}"}}'
+                    else:
+                        return '{"wait_time": 3, "content": "❌ 请提供有效的用户和对冲金额"}'
+                
+                # 如果不是@格式，继续支持原有的QQ号格式
                 match = re.search(r'小天，与\s*([^\s]+)\s*对冲\s*([0-9.]+)', message)
                 if match:
                     target_partial_id = match.group(1).strip()
@@ -160,9 +213,9 @@ class XiaotianScheduler:
                         result = self.ai.transfer_like_value(memory_key, target_partial_id, transfer_amount, group_id)
                         return f'{{"wait_time": 3, "content": "{result}"}}'
                     else:
-                        return '{"wait_time": 3, "content": "❌ 请提供有效的qq号和对冲金额"}'
+                        return '{"wait_time": 3, "content": "❌ 请提供有效的QQ号和对冲金额"}'
                 else:
-                    return '{"wait_time": 3, "content": "❌ 命令格式错误，请使用：小天，与[qq号]对冲[金额]"}'
+                    return '{"wait_time": 3, "content": "❌ 命令格式错误，请使用：小天，与[@用户]对冲[金额] 或 小天，与[QQ号]对冲[金额]"}'
             except ValueError:
                 return '{"wait_time": 3, "content": "❌ 对冲金额必须是数字"}'
             except Exception as e:
@@ -182,6 +235,8 @@ class XiaotianScheduler:
         # 设置月度任务 - 每月1号执行
         # 注意月度合集应该在1号生成上个月的合集
         self.scheduler.daily_at(MONTHLY_ASTRONOMY_TIME, self.astronomy.monthly_astronomy_task)
+        
+        self.scheduler.daily_at(MONTHLY_LIKE_REWARD_TIME, self.monthly_like_reward_task)
 
         self.is_running = True
         
@@ -189,13 +244,39 @@ class XiaotianScheduler:
         def run_scheduler():
             while self.is_running:
                 self.scheduler.run_pending()
-                # 每20秒检查一次天文海报超时状态
+                
+                # 每5秒检查一次天文海报超时状态
                 if self.astronomy.waiting_for_images:
                     last_time = time.time()
-                    while self.astronomy.waiting_for_images and (last_time - time.time() < 70):
+                    while self.astronomy.waiting_for_images and (time.time() - last_time < 70):
                         self._check_astronomy_timeout()
                         time.sleep(5)
-                time.sleep(60)  # 每60秒检查一次
+                
+                # 检查是否有活跃的天文竞答
+                if hasattr(self, 'astronomy_quiz') and self.astronomy_quiz and self.astronomy_quiz.active_quizzes:
+                    # 有活跃竞答，进入频繁检查循环
+                    for _ in range(20):  # 20次循环，每次3秒，共60秒
+                        time.sleep(3)  # 每3秒检查一次
+                        
+                        # 检查是否还有活跃竞答
+                        if not self.astronomy_quiz.active_quizzes:
+                            break
+                            
+                        # 检查每个活跃竞答的超时
+                        for group_id, quiz in list(self.astronomy_quiz.active_quizzes.items()):
+                            if quiz and not quiz.get("participants"):  # 只在没人回答时检查超时
+                                current_time = datetime.now()
+                                if "start_time" in quiz and (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
+                                    # 如果当前题目已超时，处理超时
+                                    result_msg = self.astronomy_quiz.handle_question_timeout(group_id)
+                                    if result_msg and self.root_manager.settings['qq_send_callback']:
+                                        try:
+                                            self.root_manager.settings['qq_send_callback']('group', group_id, result_msg, None)
+                                        except Exception as e:
+                                            print(f"发送题目超时消息失败: {e}")
+                else:
+                    # 没有活跃竞答，直接睡眠60秒
+                    time.sleep(60)
 
         scheduler_thread = Thread(target=run_scheduler, daemon=True)
         scheduler_thread.start()
@@ -259,48 +340,7 @@ class XiaotianScheduler:
                         # 重置指定用户的like系统
                         result = self.ai.reset_user_like_system(data)
                         return f'{{"wait_time": 3, "content": "{result}"}}'
-                    elif command == "CHECK_LIKE_STATUS":
-                        # 查看指定用户的like状态
-                        status = self.ai.get_user_like_status(data)
-                        direction_text = {
-                            'positive': '正向(增强)',
-                            'negative': '负向(恶劣)',
-                            None: '原始'
-                        }.get(status.get('last_change_direction'), '未知')
-                        
-                        # 获取当前like值的表情和态度
-                        emoji, attitude = self.ai.get_like_emotion_and_attitude(status['total_like'])
-                        
-                        # 计算到下一个阈值的距离
-                        current_like = status['total_like']
-                        next_info = ""
-                        if current_like >= 0:
-                            # 正向：找下一个正向阈值
-                            from xiaotian.manage.config import LIKE_THRESHOLDS, LIKE_PERSONALITY_CHANGE_THRESHOLD
-                            for threshold in sorted(LIKE_THRESHOLDS + [LIKE_PERSONALITY_CHANGE_THRESHOLD]):
-                                if threshold > current_like:
-                                    gap = threshold - current_like
-                                    next_info = f"距离下个里程碑({threshold:.2f})还差{gap:.2f}点"
-                                    break
-                        else:
-                            # 负向：找下一个负向阈值
-                            from xiaotian.manage.config import LIKE_THRESHOLDS, LIKE_RESET_THRESHOLD
-                            current_abs = abs(current_like)
-                            for threshold in sorted(LIKE_THRESHOLDS + [abs(LIKE_RESET_THRESHOLD)]):
-                                if threshold > current_abs:
-                                    gap = threshold - current_abs
-                                    next_info = f"距离下个节点(-{threshold:.2f})还差{gap:.2f}点"
-                                    break
-                        
-                        status_text = f"""📊 用户 {data} 的Like状态：
-{emoji} 当前好感度：{status['total_like']:.2f}
-💭 当前态度：{attitude}
-🎭 性格状态：{direction_text}
-⚡ 增长速度：{status.get('speed_multiplier', 1.0):.2f}x
-� 性格变化次数：{status.get('personality_change_count', 0)}次
-🎯 {next_info if next_info else "已达到最高/最低级别"}
-📝 已通知阈值：{len(status.get('notified_thresholds', []))}个"""
-                        return f'{{"wait_time": 3, "content": "{status_text}"}}'
+                    
                     elif command == "RESET_ALL_LIKE_SYSTEMS":
                         # 重置所有用户的like系统
                         count = 0
@@ -511,9 +551,81 @@ class XiaotianScheduler:
         try:
             # 清理旧的天文海报数据
             self.astronomy.cleanup_old_data(days_to_keep=30)
-
+            
+            # 清理临时管理员
+            temp_admin_count = self.root_manager.clear_temp_admins()
+            print(f"🧹 已清理临时管理员：{temp_admin_count}人")
+            
+            # 清理过多的用户记忆
+            memory_cleaned = 0
+            if self.ai and hasattr(self.ai, 'memory_storage'):
+                # 确保每个用户的记忆不超过MAX_MEMORY_COUNT
+                for memory_key, memories in self.ai.memory_storage.items():
+                    if len(memories) > MAX_MEMORY_COUNT:
+                        # 保留最新的MAX_MEMORY_COUNT条记忆
+                        original_count = len(memories)
+                        self.ai.memory_storage[memory_key] = memories[-MAX_MEMORY_COUNT:]
+                        memory_cleaned += (original_count - len(self.ai.memory_storage[memory_key]))
+                
+                # 保存清理后的记忆
+                self.ai.save_memory(MEMORY_FILE)
+                print(f"🧹 已清理过多的用户记忆：{memory_cleaned}条")
+            
             print("🧹 数据清理完成")
         except Exception as e:
             print(f"❌ 数据清理失败：{str(e)}")
     
+    def monthly_like_reward_task(self):
+        """月度好感度奖励发放任务（每月1号执行）"""
+        # 只在每月1号执行
+        if dt.now().day != 1:
+            return
+            
+        print(f"🏆 {dt.now().strftime('%Y-%m-%d %H:%M')} - 执行月度好感度奖励任务 - 执行月度好感度重置任务")
+        
+        try:
+            # 重置所有用户的好感度
+            result = self.like_manager.reset_all_likes()
+        
+            # 发送结果给root管理员 - 安全检查settings字典中的键是否存在
+            if (self.root_manager and hasattr(self.root_manager, 'settings') and
+                isinstance(self.root_manager.settings, dict) and
+                self.root_manager.settings.get('qq_send_callback')):
+                
+                root_id = os.getenv("NCATBOT_ADMIN")
+                message = f"⏱️ 月度好感度重置任务执行结果：\n{result}"
+                try:
+                    self.root_manager.settings['qq_send_callback']('private', root_id, message, None)
+                    print(f"已发送好感度重置结果给root管理员 {root_id}")
+                except Exception as e:
+                    print(f"发送好感度重置结果失败: {e}")
+            else:
+                print("⚠️ 无法发送好感度重置结果：未设置qq_send_callback")
+            print("📊 月度好感度重置完成")
+            
+            # 计算月度好感度奖励名单
+            winners, result_message = self.like_manager.calculate_monthly_rewards()
+            
+            # 向目标群组发送获奖名单 - 安全检查settings字典中的键是否存在
+            if winners and self.root_manager and hasattr(self.root_manager, 'settings'):
+                target_groups = self.root_manager.settings.get('target_groups', [])
+                qq_send_callback = self.root_manager.settings.get('qq_send_callback')
+                
+                if target_groups and qq_send_callback:
+                    for group_id in target_groups:
+                        try:
+                            # 发送获奖消息到群组
+                            public_message = (f"🌟 上个月好感度排行榜出炉啦！\n\n{result_message}\n\n"
+                                             f"🎁 获奖用户请前往摊位或私聊小天领取可爱文创奖励喵~")
+                            qq_send_callback('group', group_id, public_message, None)
+                            print(f"已发送好感度奖励名单到群组 {group_id}")
+                        except Exception as e:
+                            print(f"发送好感度奖励名单到群组 {group_id} 失败: {e}")
+                else:
+                    print("⚠️ 无法发送好感度奖励名单：未设置target_groups或qq_send_callback")
+                    
+            print("🏆 月度好感度奖励任务完成")
+        except Exception as e:
+            print(f"❌ 月度好感度奖励任务和重置失败：{str(e)}")
+            
 

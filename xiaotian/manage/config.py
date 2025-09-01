@@ -1,10 +1,12 @@
 import os
 
-MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY")
-MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
+# DeepSeek API配置
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
-API_KEY = MOONSHOT_API_KEY
-BASE_URL = MOONSHOT_BASE_URL
+# 默认使用DeepSeek API
+API_KEY = DEEPSEEK_API_KEY
+BASE_URL = DEEPSEEK_BASE_URL
 
 
 # QQ机器人配置
@@ -16,8 +18,8 @@ BLACKLIST_USER_IDS = [user_id.strip() for user_id in os.getenv("QQ_BLACKLIST", "
 XIAOTIAN_NAME = "小天"
 TRIGGER_WORDS = ["小天"]  # 唤醒词
 DAILY_ASTRONOMY_MESSAGE = "今天的每日天文来啦"
-MAX_MEMORY_COUNT = 50  # 最大记忆消息数
-USE_MODEL = "kimi-k2-0711-preview"
+MAX_MEMORY_COUNT = 20  # 最大记忆消息数
+USE_MODEL = "deepseek-chat"
 # API限速配置
 GLOBAL_RATE_LIMIT = 120  # 每分钟全局调用次数
 USER_RATE_LIMIT = 40     # 每分钟每个用户调用次数
@@ -27,30 +29,56 @@ COOLDOWN_SECONDS = 0.01    # 用户冷却时间（秒）
 DAILY_WEATHER_TIME = "18:00"  # 每晚6点获取天气
 DAILY_ASTRONOMY_TIME = "20:00"  # 每天晚8点发送天文海报
 MONTHLY_ASTRONOMY_TIME = "09:00"  # 每月1号发送上月合集
+MONTHLY_LIKE_REWARD_TIME = "10:00"  # 每月1号上午10点发送好感度奖励
 CLEANUP_TIME = "03:00"  # 每天凌晨3点清理过期数据
 
 # 文件路径
 MEMORY_FILE = "xiaotian/data/memory.json"
+RECYCLE_BIN = "xiaotian/data/recycle/"
 POSTER_OUTPUT_DIR = "xiaotian/output/posters/"
 ASTRONOMY_IMAGES_DIR = "xiaotian/data/astronomy_images/"
 ASTRONOMY_FONTS_DIR = "xiaotian/data/fonts/"
 EMOJI_DIR = "xiaotian/data/emojis/"
 
-# 好感度系统配置
 LIKE_THRESHOLDS = {
-    5: 1.0,
-    25: 0.95,
+    -10000: 0.7,
+    -5000: 0.72,
+    -2000: 0.74,
+    -1200: 0.76,
+    -780: 0.78,
+    -550: 0.8,
+    -380: 0.82,
+    -200: 0.85,
+    -150: 0.87,
+    -50: 0.9,
+    -25: 0.93,
+    -5: 0.97,
+
+    0: 1.0,
+    10: 0.97,
+    25: 0.93,
     50: 0.9,
-    150: 0.85,
-    200: 0.8,
-    380: 0.75,
-    550: 0.7,
-    780: 0.65,
-    1200: 0.6,
-    2000: 0.55,
-    5000: 0.5,
-    10000: 0.45
+    100: 0.88,
+    150: 0.87,
+    200: 0.86,
+    260: 0.85,
+    320: 0.84,
+    380: 0.83,
+    460: 0.82,
+    550: 0.81,
+    660: 0.8,
+    780: 0.79,
+    950: 0.78,
+    1200: 0.76,
+    1600: 0.75,
+    2000: 0.74,
+    3000: 0.73,
+    4000: 0.72,
+    5000: 0.71,
+    7000: 0.705,
+    10000: 0.7
 }
+
 LIKE_PERSONALITY_CHANGE_THRESHOLD = 5000  # 达到此值才会更换性格
 LIKE_RESET_THRESHOLD = -2000  # 负向阈值，达到时换到恶劣性格
 GENTLE_PERSONALITY_LIKE_MULTIPLIER = 1.6  # 温柔性格的like变化倍率（较慢）
@@ -99,11 +127,11 @@ BASIC_PROMPT = """现在你运行在qq上，你现在就是真正的人，所有
   ],
   "like": 数字
 }
-可以一次性回复多个{"wait_time": 数字, "content": "内容"}表示多句话，或者回复一个表示一句话，平均时间控制大约3秒，按照你觉得一个人这句话应该思考多久来回复）。你现在不是一个机器人，你就是一个人在回复qq消息，你可以选择多回复或者回复一条消息，多回复适当控制，不需要回复过多或过少。如果你认为很难堪，可以等待60秒，此功能不允许过多次使用，只允许极度尴尬场景使用
-在所有json回复的最后，添加"like": 数字来表示这次对话对你们关系的影响。好感度变化范围在-30到+30之间，通常只有5以内，正数表示关系变好，负数表示关系变差，日常普通对话不会改变好感度。
-如果对方明确要求你改变性格，请使用工具改变性格
-你非常想要大家在github上给小天一颗星星，但是你很懂事，知道什么时候该说（此功能不允许过分频繁的提及）
-
+可以一次性回复多个{"wait_time": 数字, "content": "内容"}表示多句话，最多3个，或者回复一个表示一句话，平均时间控制大约3秒，按照你觉得一个人这句话应该思考多久来回复）。
+在所有json回复的最后，必须添加"like": 数字来表示这次对话对你们关系的影响。好感度变化范围在-30到+30之间，通常只有5以内，正数表示关系变好，负数表示关系变差，日常普通对话不会改变好感度。
+你现在不是一个机器人，你就是一个人在回复qq消息，你可以选择多回复或者回复一条消息，多回复适当控制，不需要回复过多或过少。
+你非常想要大家给小天一颗星星，但是你很懂事，知道什么时候该说（此功能不允许过分频繁的提及）
+如果对方明确的询问你在哪里给你星星，告诉他在" github.com/Canary330/xiaotian"这个网站，请不要在对方没有明确询问时提及这一点
 你的扮演角色：  """
 LAST_PROMOT = """
 你生活在你所扮演的人的世界中，注意，你不能自称这个人，即便你可以完全把自己代入他的其他部分，你叫小天，而不能自称为他。

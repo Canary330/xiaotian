@@ -21,28 +21,31 @@ class WeatherTools:
     
     def daily_weather_task(self):
         """每日天气任务"""
-        if not self.root_manager.is_feature_enabled('daily_weather'):
-            return
-            
-        print(f"🌤️ {datetime.now().strftime('%H:%M')} - 执行每日天气任务")
-        
-        # 获取天气信息
-        city = self.root_manager.get_weather_city()
-        weather_info = self.get_weather_info(city)
+        try:
+            if not self.root_manager.is_feature_enabled('daily_weather'):
+                return
 
-        if "error" not in weather_info:
-            # 生成天气报告
-            weather_report = self._format_weather_report(weather_info)
-            print(f"📢 天气播报：\n{weather_report}")
-            
-            # 发送到目标群组
-            target_groups = self.root_manager.get_target_groups()
-            if target_groups:
-                self.message_sender.send_message_to_groups(weather_report)
+            print(f"🌤️ {datetime.now().strftime('%H:%M')} - 执行每日天气任务")
+
+            # 获取天气信息
+            city = self.root_manager.get_weather_city()
+            weather_info = self.get_weather_info(city)
+
+            if "error" not in weather_info:
+                # 生成天气报告
+                weather_report = self._format_weather_report(weather_info)
+                print(f"📢 天气播报：\n{weather_report}")
+
+                # 发送到目标群组
+                target_groups = self.root_manager.get_target_groups()
+                if target_groups:
+                    self.message_sender.send_message_to_groups(weather_report)
+                else:
+                    print("⚠️ 没有设置目标群组，天气报告未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
             else:
-                print("⚠️ 没有设置目标群组，天气报告未发送。请使用命令'小天，设置目标群组：群号1,群号2'来设置目标群组。")
-        else:
-            print(f"❌ 天气获取失败：{weather_info['error']}")
+                print(f"❌ 天气获取失败：{weather_info['error']}")
+        except Exception:
+            pass
 
     def _format_weather_report(self, weather_info: dict) -> str:
         """格式化天气报告"""

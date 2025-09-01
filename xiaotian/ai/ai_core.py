@@ -1,6 +1,5 @@
 """
 小天的核心AI接口模块
-负责与Moonshot API的交互
 """
 
 from openai import OpenAI
@@ -17,7 +16,7 @@ from ..manage.config import (
     GENTLE_PERSONALITY_LIKE_MULTIPLIER, SHARP_PERSONALITY_LIKE_MULTIPLIER, 
     GENTLE_PERSONALITY_INDICES, SHARP_PERSONALITY_INDICES, ENHANCED_GENTLE_PERSONALITIES, 
     ENHANCED_SHARP_PERSONALITIES, LIKE_EMOTIONS, LIKE_SPEED_DECAY_RATE, 
-    LIKE_MIN_SPEED_MULTIPLIER, SYSTEM_PROMPT, LAST_PROMOT
+    LIKE_MIN_SPEED_MULTIPLIER, SYSTEM_PROMPT, LAST_PROMOT,RECYCLE_BIN
 )
 
 class XiaotianAI:
@@ -49,10 +48,12 @@ class XiaotianAI:
         
     def change_model(self, new_model: str) -> str:
         """动态更换AI模型"""
-        old_model = self.current_model
-        self.current_model = new_model
-        return f"✅ 模型已从 {old_model} 更换为 {new_model}"
-        
+        try:
+            self.current_model = new_model
+            return f"✅ 模型已从 {old_model} 更换为 {new_model}"
+        except:
+            return f"wrong"
+            
     def _should_reload_memory(self, file_path: str) -> bool:
         """检查是否需要重新加载记忆文件"""
         try:
@@ -214,9 +215,9 @@ class XiaotianAI:
         # 获取当前速度倍率
         speed_multiplier = status.get('speed_multiplier', 1.0)
         
-        # 如果是负值（减少），乘以3倍，使减少永远比增加快
+        # 如果是负值（减少），乘以5倍，使减少永远比增加快
         if like_change < 0:
-            like_change = like_change * 3
+            like_change = like_change * 5
         
         # 应用性格倍率和速度倍率到like变化
         adjusted_like_change = round(like_change * personality_multiplier * speed_multiplier, 2)
@@ -286,26 +287,21 @@ class XiaotianAI:
                 notified_thresholds.append(threshold)
                 new_speed = LIKE_THRESHOLDS[threshold]  # 直接取固定值
                 status['speed_multiplier'] = new_speed
-                next_threshold = self._get_next_threshold(threshold, True)
-                if next_threshold:
-                    gap = round(next_threshold - current_like, 2)
-                    notification_message += f"\n🎯 已达到好感度{threshold}！距离下一级还差{gap}点～"
+                if current_like >= 0:
+                    next_threshold = self._get_next_threshold(threshold, True)
+                    if next_threshold:
+                        gap = round(next_threshold - current_like, 2)
+                        notification_message += f"\n🎯 已达到好感度{threshold}！距离下一级还差{gap}点～"
+                    else:
+                        notification_message += f"\n🏆 恭喜达到好感度{threshold}！你已经是最高等级啦！"
+                    break
                 else:
-                    notification_message += f"\n🏆 恭喜达到好感度{threshold}！你已经是最高等级啦！"
-                break
-
-            # 负向阈值
-            elif current_like <= -threshold and -threshold not in notified_thresholds and current_like <= -5:
-                notified_thresholds.append(-threshold)
-                new_speed = LIKE_THRESHOLDS[threshold]  # 负向也可以用相同速度映射
-                status['speed_multiplier'] = new_speed
-                next_threshold = self._get_next_threshold(-threshold, False)
-                if next_threshold:
-                    gap = round(abs(next_threshold - current_like), 2)
-                    notification_message += f"\n⚠️ 好感度降到了-{threshold}...下一个节点是{next_threshold}，还有{gap}点距离"
-                else:
-                    notification_message += f"\n💥 好感度已经降到了-{threshold}，已经是最低点了..."
-                break
+                    next_threshold = self._get_next_threshold(threshold, False)
+                    if next_threshold:
+                        notification_message += f"\n⚠️ 好感度降到了{threshold}...下一个节点是{next_threshold}"
+                    else:
+                        notification_message += f"\n💥 好感度已经降到了{threshold}，已经是最低点了..."
+                    break
         
         status['notified_thresholds'] = notified_thresholds
         
@@ -322,11 +318,10 @@ class XiaotianAI:
                 if threshold > current_threshold:
                     return threshold
         else:
-            # 负向：寻找比当前阈值（绝对值）大的最小值
-            current_abs = abs(current_threshold)
-            for threshold in sorted(LIKE_THRESHOLDS):
-                if threshold > current_abs:
-                    return -threshold
+            # 负向：寻找比当前阈值小的最大值
+            negative_thresholds = [t for t in sorted(LIKE_THRESHOLDS) if t < current_threshold]
+            if negative_thresholds:
+                return max(negative_thresholds)
         return None
     
     def get_like_emotion_and_attitude(self, like_value: float) -> tuple:
@@ -377,9 +372,18 @@ class XiaotianAI:
         self.user_personality[memory_key] = new_personality
         print(f"已为用户 {memory_key} 调整为增强锐利性格")
     
-    def find_user_by_partial_id(self, partial_id: str, current_group_id: str = None) -> str:
+    def find_user_by_partial_id(self, partial_id: str, current_group_id: str = None) -> list:
         """根据部分用户ID查找完整的用户ID（搜索全局like状态中的用户）"""
         matches = []
+        
+        # 如果提供的是完整QQ号，直接返回
+        if partial_id.isdigit() and len(partial_id) >= 5:
+            # 检查这个用户是否存在于我们的系统中
+            if f"user_{partial_id}" in self.user_like_status:
+                return [partial_id]
+            # 如果没有，但是看起来像有效的QQ号，也返回它
+            if len(partial_id) >= 5 and len(partial_id) <= 10:
+                return [partial_id]
         
         # 清理旧格式的数据并搜索用户
         keys_to_remove = []
@@ -431,7 +435,7 @@ class XiaotianAI:
         
         # 如果没有指定对冲金额，返回用户当前状态和可选择的范围
         if transfer_amount is None:
-            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：小天，与{target_partial_id}对冲[金额]"
+            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：小天，与[@用户]对冲[金额]"
         
         # 验证对冲金额
         if transfer_amount <= 0:
@@ -699,97 +703,22 @@ class XiaotianAI:
 
                 # 添加当前用户消息
                 messages.append({"role": "user", "content": user_message})
-                if use_tools:
-                    # 定义可用的工具
-                    tools = [
-                            {
-                            "type": "function",
-                            "function": {
-                                "name": "create_custom_personality",
-                                "description": "当用户想要改变AI的说话风格、性格特点或表达方式时调用此工具，只要不是明确的希望改变性格，就不要调用此工具。若是，则务必调用此工具，不要自己直接回复。",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "userprompt": {
-                                            "type": "string",
-                                            "description": "用户输入的提示信息，用于生成自定义性格,如果有对应的网络角色，可以在此处提及。",
-                                        }
-                                    },
-                                    "required": ["userprompt"]
-                                }
-                            }
-                        },
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": "restore_original_personality",
-                                "description": "当用户明确要求恢复原来的性格、变回原来的样子、或者表达想要我恢复成初始状态时调用此工具。",
-                                "parameters": {
-                                "type": "object",
-                                    "properties": {},
-                                }
-                            }
-                        }
-                    ]
 
-                    # 调用API，启用工具
-                    model = self.current_model
-                    response = self.client.chat.completions.create(
-                        model=model,
-                        messages=messages,
-                        tools=tools,
-                        tool_choice="auto",
-                        response_format={"type": "json_object"},
-                        temperature=0.6
-                    )
-
-                    # 检查是否有工具调用
-                    if response.choices[0].message.tool_calls:
-                        tool_call = response.choices[0].message.tool_calls[0]
-                        if tool_call.function.name == "create_custom_personality":
-                            # 解析工具调用参数
-                            params = json.loads(tool_call.function.arguments)
-                            user_request = params.get("user_request", user_message)
-
-                            print(f"🎭 AI决定创建自定义性格，用户需求: {user_request}")
-
-                            # 生成自定义性格
-                            new_personality = self.generate_custom_personality(user_request, memory_key)
-
-                            if new_personality:
-                                # 保存记忆
-                                self.save_memory(MEMORY_FILE)
-                                ai_response = "成功创建了自定义性格"
-                            else:
-                                ai_response = "抱歉，创建自定义性格时遇到了问题，请稍后再试~"
-
-                        elif tool_call.function.name == "restore_original_personality":
-                            print(f"🔄 AI决定恢复用户原始性格")
-
-                            # 恢复原始性格
-                            result = self.restore_original_personality(memory_key)
-                            ai_response = result
-                        else:
-                            ai_response = response.choices[0].message.content
-                    else:
-                        # 没有工具调用，正常回复
-                        ai_response = response.choices[0].message.content
-                else:
-                    # 不使用工具的普通调用
-                    model = self.current_model
-                    response = self.client.chat.completions.create(
-                        model=model,
-                        messages=messages,
-                        temperature=0.6,
-                        response_format={"type": "json_object"}
-                    )
-                    ai_response = response.choices[0].message.content
+                # 不使用工具的普通调用
+                model = self.current_model
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.6,
+                    response_format={"type": "json_object"}
+                )
+                ai_response = response.choices[0].message.content
             else:
-                model = "moonshot-v1-8k"
+                # model = "moonshot-v1-8k"
                 messages = [ {"role": "system", "content": SYSTEM_PROMPT[0]},
                     {"role": "user", "content": user_message}]
                 response = self.client.chat.completions.create(
-                    model=model,
+                    model=USE_MODEL,
                     messages=messages,
                     temperature=0.6,
                     )
@@ -827,10 +756,10 @@ class XiaotianAI:
         """使用自定义系统提示词进行查询，主要用于天气等功能"""
         try:
             # 调用API
-            model = "moonshot-v1-8k"
+            # model = "moonshot-v1-8k"
             
             response = self.client.chat.completions.create(
-                model=model,
+                model=USE_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_query}
@@ -850,6 +779,13 @@ class XiaotianAI:
         try:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             
+            # 在保存前，确保每个用户的记忆不超过最大限制
+            for memory_key, memories in self.memory_storage.items():
+                if len(memories) > MAX_MEMORY_COUNT:
+                    # 保留最新的MAX_MEMORY_COUNT条记忆，删除最早的
+                    self.memory_storage[memory_key] = memories[-MAX_MEMORY_COUNT:]
+                    print(f"⚠️ 用户 {memory_key} 的记忆超过限制，已删除最早的 {len(memories) - MAX_MEMORY_COUNT} 条记忆")
+            
             # 保存记忆、性格映射和like状态
             save_data = {
                 'memory_storage': self.memory_storage,
@@ -864,6 +800,42 @@ class XiaotianAI:
             
         except Exception as e:
             print(f"❌ 保存记忆文件失败: {e}")
+            
+    def delete_memory(self, file_path: str, keep_user_personality: bool = True):
+        """将指定文件移动到回收站，并在源目录创建新文件，可选择是否保留user_personality"""
+        try:
+            if not os.path.isfile(file_path):
+                print(f"文件不存在: {file_path}")
+                return
+            # 读取原文件内容
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            user_personality = {}
+            if keep_user_personality and isinstance(data, dict):
+                user_personality = data.get('user_personality', {})
+
+            # 移动到回收站
+            dest_dir = RECYCLE_BIN
+            os.makedirs(dest_dir, exist_ok=True)
+            filename = os.path.basename(file_path)
+            dest_file = os.path.join(dest_dir, filename)
+            os.rename(file_path, dest_file)
+            print(f"已移动文件: {file_path} -> {dest_file}")
+            print(f"✅ 已将文件 {file_path} 移动到回收站 {dest_dir}")
+
+            if keep_user_personality:
+                # 在源目录创建新文件
+                new_data = {
+                    "memory_storage": {},
+                    "user_personality": user_personality,
+                    "user_like_status": {}
+                }
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(new_data, f, ensure_ascii=False, indent=2)
+                print(f"✅ 已在源目录创建新文件: {file_path}，是否保留user_personality: {keep_user_personality}")
+        except Exception as e:
+            print(f"❌ 移动文件或创建新文件失败: {e}")
     
     def load_memory(self, file_path: str):
         """从文件加载记忆、用户性格和like状态"""
@@ -878,11 +850,22 @@ class XiaotianAI:
                     # 兼容旧版本的内存文件格式
                     if isinstance(data, dict) and 'memory_storage' in data:
                         # 新格式
-                        self.memory_storage = data.get('memory_storage', {})
+                        memory_storage = data.get('memory_storage', {})
+                        # 在加载时检查每个用户的记忆数量，确保不超过限制
+                        for memory_key, memories in memory_storage.items():
+                            if len(memories) > MAX_MEMORY_COUNT:
+                                memory_storage[memory_key] = memories[-MAX_MEMORY_COUNT:]
+                                print(f"⚠️ 加载记忆时：用户 {memory_key} 的记忆超过限制，已截取最近的 {MAX_MEMORY_COUNT} 条")
+                        
+                        self.memory_storage = memory_storage
                         self.user_personality = data.get('user_personality', {})
                         self.user_like_status = data.get('user_like_status', {})
                     elif isinstance(data, list):
                         # 旧格式：直接是memory列表，需要迁移
+                        # 在加载时确保旧格式记忆也不超过限制
+                        if len(data) > MAX_MEMORY_COUNT:
+                            data = data[-MAX_MEMORY_COUNT:]
+                            print(f"⚠️ 加载旧格式记忆时：记忆数量超过限制，已截取最近的 {MAX_MEMORY_COUNT} 条")
                         self.memory_storage = {'default': data}  # 将旧记忆放入默认键
                         self.user_personality = {}
                         self.user_like_status = {}

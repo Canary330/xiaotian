@@ -19,7 +19,7 @@
 pip install ncatbot openai requests pillow matplotlib wordcloud jieba
 
 # 设置环境变量 | Set environment variables
-export MOONSHOT_API_KEY="your-api-key"
+export DEEPSEEK_API_KEY="your-api-key"
 export NCATBOT_QQ="你的机器人QQ号"
 export NCATBOT_ADMIN="你的管理员QQ号"
 ```
