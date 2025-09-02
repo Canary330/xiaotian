@@ -5,6 +5,7 @@
 
 import os
 import re
+import random
 from datetime import datetime as dt, datetime, timedelta
 from threading import Thread
 from typing import List, Callable, Tuple, Optional, Any, Dict
@@ -23,6 +24,7 @@ from .ai.ai_core import XiaotianAI
 from .tools.weather_tools import WeatherTools
 from .tools.astronomy import AstronomyPoster
 from .tools.astronomy_quiz import AstronomyQuiz
+from .tools.criminal import CriminalCase
 from .tools.welcome import WelcomeManager
 from .manage.root_manager import RootManager
 from .manage.like_manager import LikeManager
@@ -92,6 +94,7 @@ class XiaotianScheduler:
         # 初始化新功能组件
         self.astronomy = AstronomyPoster(root_manager=self.root_manager)
         self.astronomy_quiz = AstronomyQuiz(root_manager=self.root_manager, ai_core=ai)  # 初始化天文竞答
+        self.criminal_case = CriminalCase(root_manager=self.root_manager, ai_core=ai)  # 初始化案件还原功能
         self.welcome_manager = WelcomeManager(root_manager=self.root_manager, ai=ai)  # 初始化欢迎管理器
         self.like_manager = LikeManager(root_manager=self.root_manager, ai=ai)  # 初始化好感度管理器
         self.wait_for_wakeup = False
@@ -142,6 +145,12 @@ class XiaotianScheduler:
                 return f'{{"data": [{{"wait_time": 1, "content": "{result}"}}, {{"wait_time": 3, "content": "{message}"}}], "like": 0}}'
             return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
             
+        # 检查案件还原命令
+        if message.strip() == "小天 案件还原" and group_id:
+            # 只在群聊中开启案件还原
+            result = self.criminal_case.start_case(group_id, user_id)
+            return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            
         # 检查是否是竞答结束命令
         if message.strip() in ["结算", "结束竞答"] and group_id and group_id in self.astronomy_quiz.active_quizzes:
             result1, result2 = self.astronomy_quiz.finish_quiz(group_id, user_id)
@@ -150,15 +159,8 @@ class XiaotianScheduler:
                 return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}, {{"wait_time": 4, "content": "{result2}"}}], "like": 0}}'
             else:
                 return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}], "like": 0}}'
-            
-        # 检查群组是否处于竞答模式，如果是则将所有消息视为答案
-        if group_id and group_id in self.astronomy_quiz.active_quizzes:
-            response, next_question = self.astronomy_quiz.process_answer(user_id, message, group_id)
-            if response and next_question:
-                # 分开发送答题反馈和下一题目，中间延迟4秒
-                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}, {{"wait_time": 4, "content": "{next_question}"}}], "like": 0}}'
-            elif response:
-                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}], "like": 0}}'
+                
+        # 非特殊模式下继续正常处理
                     
         # 检查更改性格命令
         if message.startswith("小天，更改性格"):
@@ -260,7 +262,10 @@ class XiaotianScheduler:
                     while self.astronomy.waiting_for_images and (time.time() - last_time < 70):
                         self._check_astronomy_timeout()
                         time.sleep(5)
-                
+                # 检查是否有活跃的案件推理
+                if hasattr(self, 'criminal_case') and self.criminal_case and self.criminal_case.active_cases:
+                    # 检查案件超时
+                    self._check_case_timeout()
                 # 检查是否有活跃的天文竞答
                 if hasattr(self, 'astronomy_quiz') and self.astronomy_quiz and self.astronomy_quiz.active_quizzes:
                     # 有活跃竞答，进入频繁检查循环
@@ -302,19 +307,87 @@ class XiaotianScheduler:
         """停止调度器"""
         self.is_running = False
         print("🤖 小天调度器已停止")
+        
+    def _check_case_timeout(self):
+        """检查案件超时状态"""
+        # 获取所有超时的案件
+        timeout_cases = self.criminal_case.check_case_timeout()
+        
+        # 处理每个超时案件
+        for group_id, (timeout_message, truth_message) in timeout_cases.items():
+            try:
+                print(f"🕰️ 案件在群 {group_id} 超时")
+                # 发送超时消息
+                if timeout_message:
+                    self.message_sender.send_message_to_groups(timeout_message, group_id=group_id)
+                
+                # 短暂延时后发送真相
+                if truth_message:
+                    time.sleep(4 + random.uniform(0, 1))  # 添加随机延时
+                    self.message_sender.send_message_to_groups(truth_message, group_id=group_id)
+            except Exception as e:
+                print(f"发送案件超时消息时出错: {e}")
+                import traceback
+                print(traceback.format_exc())
 
 
     def process_message(self, user_id: str, message: str, group_id: str = None, image_data: bytes = None) -> tuple[str, str, str]:
         """处理用户消息"""
         
-        # 检查唤醒状态是否超时
+        # 检查是否处于特殊模式中(案件推理或天文竞答)
+        in_case_mode = group_id and hasattr(self, 'criminal_case') and group_id in self.criminal_case.active_cases
+        in_quiz_mode = group_id and hasattr(self, 'astronomy_quiz') and group_id in self.astronomy_quiz.active_quizzes
+        in_special_mode = in_case_mode or in_quiz_mode
+        
+        # 先处理案件推理模式中的消息，优先级最高
+        if in_case_mode:
+            # 检查是否是案件结束命令
+            if message.strip() in ["小天 结束案件", "结束案件"]:
+                result = self.criminal_case.process_investigation(user_id, "结束案件", group_id)[0]
+                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            # 所有在案件模式下的消息都作为调查指令处理
+            result, new_clues, solved = self.criminal_case.process_investigation(user_id, message, group_id)
+            
+            # 如果案件已解决，添加好感度奖励
+            if solved:
+                like_reward = self.criminal_case.award_case_solved(user_id, group_id)
+                if like_reward > 0:
+                    like_message = f"🎉 恭喜！你成功解决了案件，获得 {like_reward} 点好感度奖励！"
+                    return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}, {{"wait_time": 4, "content": "{like_message}"}}], "like": {like_reward}}}'
+                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+            elif new_clues:
+                # 分开发送调查结果和新线索，中间延迟4秒
+                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}, {{"wait_time": 4, "content": "{new_clues}"}}], "like": 0}}'
+            else:
+                return f'{{"data": [{{"wait_time": 3, "content": "{result}"}}], "like": 0}}'
+                
+        # 处理天文竞答模式中的消息
+        if in_quiz_mode:
+            # 检查是否是竞答结束命令
+            if message.strip() in ["结算", "结束竞答"]:
+                result1, result2 = self.astronomy_quiz.finish_quiz(group_id, user_id)
+                # 分开发送结束通知和结果详情，中间延迟4秒
+                if result2:
+                    return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}, {{"wait_time": 4, "content": "{result2}"}}], "like": 0}}'
+                else:
+                    return f'{{"data": [{{"wait_time": 3, "content": "{result1}"}}], "like": 0}}'
+            
+            # 所有在竞答模式下的消息都视为答案
+            response, next_question = self.astronomy_quiz.process_answer(user_id, message, group_id)
+            if response and next_question:
+                # 分开发送答题反馈和下一题目，中间延迟4秒
+                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}, {{"wait_time": 4, "content": "{next_question}"}}], "like": 0}}'
+            elif response:
+                return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}], "like": 0}}'
+        
+        # 只有不在特殊模式时才检查唤醒状态超时
         current_time = time.time()
-        if self.wait_for_wakeup and (current_time - self.wakeup_time - self.ai_response_time) > self.waiting_time:
+        if not in_special_mode and self.wait_for_wakeup and (current_time - self.wakeup_time - self.ai_response_time) > self.waiting_time:
             self.wait_for_wakeup = False
             self.ai_response_time = 0  # 重置AI回复时间累计
             print(f"唤醒状态超时，已自动关闭")
         
-        # 检查用户特殊提示词
+        # 检查用户特殊提示词(只有不在案件推理模式时才检查)
         special_command_result = self._check_special_user_commands(user_id, message, group_id)
         if special_command_result:
             return special_command_result
@@ -567,6 +640,15 @@ class XiaotianScheduler:
         try:
             # 清理旧的天文海报数据
             self.astronomy.cleanup_old_data(days_to_keep=30)
+            
+            # 清理所有进行中的案件
+            cases_cleaned = self.criminal_case.daily_cleanup()
+            if cases_cleaned > 0:
+                print(f"🧹 清理了 {cases_cleaned} 个未完成的案件推理")
+                
+                # 通过消息发送器通知相关群组
+                for group_id in self.root_manager.get_target_groups():
+                    self.message_sender.send_message_to_groups(f"⏱️ 系统维护：所有未完成的案件推理已被清理。")
             
             # 清理临时管理员
             temp_admin_count = self.root_manager.clear_temp_admins()

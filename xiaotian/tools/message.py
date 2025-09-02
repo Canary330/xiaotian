@@ -11,10 +11,17 @@ class MessageSender:
         self.root_manager = root_manager
         self.ai = ai_core
 
-    def send_message_to_groups(self, message: str = None, image_path: str = None):
-        """向目标群组发送消息"""
-        if self.root_manager.settings['qq_send_callback'] and self.root_manager.settings['target_groups']:
-            for group_id in self.root_manager.settings['target_groups']:
+    def send_message_to_groups(self, message: str = None, image_path: str = None, group_id: str = None):
+        """向目标群组发送消息
+        
+        Args:
+            message: 要发送的文本消息
+            image_path: 要发送的图片路径
+            group_id: 指定的群组ID，如果提供则只发送到这个群组
+        """
+        if self.root_manager.settings['qq_send_callback']:
+            target_groups = [group_id] if group_id else self.root_manager.settings['target_groups']
+            for group_id in target_groups:
                 try:
                     print(f"正在发送消息到群组 {group_id}...")
 
