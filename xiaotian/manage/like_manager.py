@@ -194,7 +194,7 @@ class LikeManager:
                 last_month = now.month - 1
                 last_year = now.year
                 
-            result_message = f"⚪ {last_year}年{last_month}月好感度排行榜前{reward_count}名（取30%且最多{self.max_reward_count}人）\n\n"
+            result_message = f"⚪ {last_year}年{last_month}月好感度排行榜前{reward_count}名（取30%）\n\n"
             
             for winner in reward_list:
                 result_message += f"🏆 第{winner['rank']}名: [CQ:at,qq={winner['user_id']}], 好感度 {winner['like']:.2f}\n"

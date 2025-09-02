@@ -283,20 +283,28 @@ class XiaotianAI:
         
         for threshold in LIKE_THRESHOLDS:
             # 正向阈值
-            if current_like >= threshold and threshold not in notified_thresholds and current_like >= 5:
-                notified_thresholds.append(threshold)
-                new_speed = LIKE_THRESHOLDS[threshold]  # 直接取固定值
-                status['speed_multiplier'] = new_speed
-                if current_like >= 0:
+            if current_like >= 5 and threshold not in notified_thresholds and current_like >= threshold:
                     next_threshold = self._get_next_threshold(threshold, True)
-                    if next_threshold:
-                        gap = round(next_threshold - current_like, 2)
-                        notification_message += f"\n🎯 已达到好感度{threshold}！距离下一级还差{gap}点～"
+                    if next_threshold >= current_like:
+                        continue
                     else:
-                        notification_message += f"\n🏆 恭喜达到好感度{threshold}！你已经是最高等级啦！"
-                    break
+                        notified_thresholds.append(threshold)
+                        new_speed = LIKE_THRESHOLDS[threshold]  # 直接取固定值
+                        status['speed_multiplier'] = new_speed
+                        if next_threshold:
+                            gap = round(next_threshold - current_like, 2)
+                            notification_message += f"\n🎯 已达到好感度{threshold}！距离下一级还差{gap}点～"
+                        else:
+                            notification_message += f"\n🏆 恭喜达到好感度{threshold}！你已经是最高等级啦！"
+                        break
+            elif current_like <= -5 and threshold not in notified_thresholds and current_like <= threshold:
+                next_threshold = self._get_next_threshold(threshold, False)
+                if next_threshold >= current_like:
+                    continue
                 else:
-                    next_threshold = self._get_next_threshold(threshold, False)
+                    notified_thresholds.append(threshold)
+                    new_speed = LIKE_THRESHOLDS[threshold]  # 直接取固定值
+                    status['speed_multiplier'] = new_speed
                     if next_threshold:
                         notification_message += f"\n⚠️ 好感度降到了{threshold}...下一个节点是{next_threshold}"
                     else:

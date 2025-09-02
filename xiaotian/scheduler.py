@@ -486,10 +486,10 @@ class XiaotianScheduler:
         if group_id:
             emotion = self.ai.detect_emotion(message)
             if emotion in ('cold', 'hot'):
-                if self.root_manager.can_auto_trigger(group_id):
-                    should_auto_trigger = True
-                    self.root_manager.record_auto_trigger(group_id)
-                    print(f"群 {group_id} 自动触发响应，情绪: {emotion}")
+                # if self.root_manager.can_auto_trigger(group_id):
+                should_auto_trigger = True
+                self.root_manager.record_auto_trigger(group_id)
+                print(f"群 {group_id} 自动触发响应，情绪: {emotion}")
         else:
             emotion = None
         

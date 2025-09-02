@@ -155,7 +155,7 @@ class XiaotianQQBot:
                 like_status = self.ai.get_user_like_status(user_id_for_like)
                 like_display = self.ai.format_like_display(like_status['total_like'])
                 # 组合最终回复：原回复 + like显示 + 可能的通知消息
-                like_response = "好感度："
+                like_response = ""
                 like_response += f"{like_display}"
                 if notification_message:
                     like_response += f"{notification_message}"
@@ -331,6 +331,9 @@ class XiaotianQQBot:
                 elif cleaned_response:
                     sleep_time = 3 + random.uniform(0, 1)
                     self.scheduler.add_response_wait_time(sleep_time)
+                    # 检查是否为余额不足错误
+                    if cleaned_response == "抱歉，我遇到了一些问题：Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknownerror', 'param': None, 'code': 'invalidrequest_error'}}":
+                        cleaned_response = "小天包里没钱啦，能不能拜托你联系一下会长，求求啦"
                     await asyncio.sleep(sleep_time)
                     if len(self.replying_users) <= 1:
                         await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response)

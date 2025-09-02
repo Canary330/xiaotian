@@ -454,19 +454,17 @@ class AstronomyQuiz:
             
             # 根据排名分配奖励
             for i, (u_id, score) in enumerate(ranked_scores):
-                # 只有正分才有奖励
-                con = True
                 if score <= 0:
                     reward = abs(score)
-                    con = False
+                    continue
                 if i == 0:  # 第一名
-                    reward = 500 if con else 8
+                    reward = 500
                     result_message += f"🥇 第1名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 elif i == 1:  # 第二名
-                    reward = 300 if con else 5
+                    reward = 300
                     result_message += f"🥈 第2名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 elif i == 2:  # 第三名
-                    reward = 100 if con else 3
+                    reward = 100
                     result_message += f"🥉 第3名：[CQ:at,qq={u_id}]:{score:.2f}分，额外奖励 +{reward:.2f} 好感度\n"
                 else:
                     reward = 1
