@@ -351,9 +351,33 @@ class RootManager:
             return (f"❌ 保存图片失败：{str(e)}", None)
     
     def _set_target_groups(self, groups: List[str]) -> Tuple[str, None]:
-        """设置目标群组"""
-        self.settings['target_groups'] = groups
+        """添加目标群组，如果群组已存在则忽略"""
+        added_groups = []
+        for group in groups:
+            if group not in self.settings['target_groups']:
+                self.settings['target_groups'].append(group)
+                added_groups.append(group)
+        
+        if not added_groups:
+            return ("⚠️ 指定的群组已经在目标群组列表中", None)
+            
         self.save_settings()
+        
+        # 向新添加的目标群组发送欢迎图片和文字
+        if self.settings['qq_send_callback'] and self.ai and added_groups:
+            try:
+                # 欢迎图片路径
+                welcome_image = "[CQ:image,summary=&#91;哈喽&#93;,file=9f-9f61df9b53ffc21a329e89a546a38e75.gif,url=https://gxh.vip.qq.com/club/item/parcel/item/9f/9f61df9b53ffc21a329e89a546a38e75/raw300.gif,key=edaee640a9667344,emoji_id=9f61df9b53ffc21a329e89a546a38e75,emoji_package_id=195537]"
+                # 欢迎文字
+                welcome_message = "✨ 你好！我是小天，很高兴能为这个群组服务！\n我可以提供天文知识、天气查询、天文竞答等功能，请多多关照～"
+                
+                # 仅向新添加的群组发送欢迎消息
+                for group in added_groups:
+                    self._send_welcome_message_to_groups(welcome_message, welcome_image, group_id=group)
+            except Exception as e:
+                print(f"向新群组发送欢迎消息失败：{e}")
+                pass
+                
         return (f"✅ 目标群组已设置：{', '.join(groups)}", None)
     
     def _remove_target_groups(self, groups: List[str]) -> Tuple[str, None]:
@@ -363,12 +387,41 @@ class RootManager:
             if group in self.settings['target_groups']:
                 self.settings['target_groups'].remove(group)
                 removed_groups.append(group)
-        
+                
         if removed_groups:
             self.save_settings()
             return (f"✅ 已移除目标群组：{', '.join(removed_groups)}", None)
         else:
-            return ("⚠️ 指定的群组不在目标群组列表中", None)
+            return ("⚠️ 未找到指定的目标群组", None)
+                
+    def _send_welcome_message_to_groups(self, message: str = None, image_path: str = None,group_id: str = None):
+        """向目标群组发送欢迎消息和图片
+        参考 MessageSender.send_message_to_groups 的实现
+        """
+        import os
+        import time
+        import random
+        
+        if self.settings['qq_send_callback'] and group_id:
+            try:
+                print(f"正在发送欢迎消息到群组 {group_id}...")
+                # 处理图片路径
+                wait_time = 3
+                time.sleep(wait_time + random.uniform(-1, 1))
+                # 先发送图片，后发送文本
+                print(f"先发送图片到群组 {group_id}")
+                self.settings['qq_send_callback']('group', group_id, None, image_path)
+                    # 添加短暂延时，确保图片发送完成
+                time.sleep(10 + random.uniform(0, 1))
+                # 如果有文本消息，再发送文本
+                if message:
+                    print(f"再发送文本到群组 {group_id}")
+                    self.settings['qq_send_callback']('group', group_id, message, None)
+            except Exception as e:
+                print(f"发送欢迎消息到群组 {group_id} 失败：{e}")
+                # 静默处理错误
+        
+
     
     def _add_auto_trigger_groups(self, groups: List[str]) -> Tuple[str, None]:
         """添加自动触发群组"""

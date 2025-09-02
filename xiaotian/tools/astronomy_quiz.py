@@ -637,7 +637,21 @@ class AstronomyQuiz:
             points = self._calculate_reward(time_used, is_first=False, difficulty=difficulty)
             self.user_scores[user_id]["points"] -= points  
             quiz["scores"][user_id] = quiz["scores"].get(user_id, 0) - points
-            response = f"❌ 回答错误! -{points:.2f}分"
+            
+            # 显示正确答案
+            if question_data.get("type") == "fill_blank":
+                # 填空题
+                response = f"❌ 回答错误! -{points:.2f}分\n✅ 正确答案：{question_data['answer']}"
+            else:
+                # 选择题 - 处理随机排序的选项
+                if "shuffled_options" in question_data and "shuffled_correct" in question_data:
+                    correct_option = question_data["shuffled_options"][question_data["shuffled_correct"]]
+                    correct_letter = chr(65 + question_data["shuffled_correct"])
+                else:
+                    correct_option = question_data["options"][question_data["correct"]]
+                    correct_letter = chr(65 + question_data["correct"])
+                
+                response = f"❌ 回答错误! -{points:.2f}分\n✅ 正确答案：{correct_letter}. {correct_option}"
         
         # 计算好感度调整
         if self.ai:
