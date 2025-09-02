@@ -22,7 +22,7 @@ MAX_MEMORY_COUNT = 20  # 最大记忆消息数
 USE_MODEL = "moonshot-v1-8k"
 # API限速配置
 GLOBAL_RATE_LIMIT = 120  # 每分钟全局调用次数
-USER_RATE_LIMIT = 40     # 每分钟每个用户调用次数
+USER_RATE_LIMIT = 60     # 每分钟每个用户调用次数
 COOLDOWN_SECONDS = 0.01    # 用户冷却时间（秒）
 
 # 定时任务配置

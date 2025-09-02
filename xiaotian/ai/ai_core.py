@@ -50,7 +50,7 @@ class XiaotianAI:
         """动态更换AI模型"""
         try:
             self.current_model = new_model
-            return f"✅ 模型已从 {old_model} 更换为 {new_model}"
+            return f"✅ 模型已更换为 {new_model}"
         except:
             return f"wrong"
             
