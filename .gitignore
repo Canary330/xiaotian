@@ -9,6 +9,7 @@ xiaotian/data/fonts/
 BKUP/
 kaifa.txt
 xiaotian/data/memory.json
+xiaotian/data/welcome/hello.png
 # Logs
 logs/
 *.log

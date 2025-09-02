@@ -369,7 +369,7 @@ class XiaotianScheduler:
                         return f'{{"wait_time": 3, "content": "{command}"}}'
             else:
                 # 私聊中处理特殊指令 - 天文海报
-                if message.startswith("小天，每日天文做好啦："):
+                if message.startswith("每日天文：") or message.startswith("小天，每日天文做好啦：") or message.startswith("小天，每日天文做好了："):
                     # 否则就是普通天文内容处理
                     result = self.astronomy._handle_astronomy_poster(message, user_id)
                     return f'{{"wait_time": 3, "content": "{result}"}}'

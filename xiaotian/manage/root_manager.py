@@ -367,9 +367,9 @@ class RootManager:
         if self.settings['qq_send_callback'] and self.ai and added_groups:
             try:
                 # 欢迎图片路径
-                welcome_image = "[CQ:image,summary=&#91;哈喽&#93;,file=9f-9f61df9b53ffc21a329e89a546a38e75.gif,url=https://gxh.vip.qq.com/club/item/parcel/item/9f/9f61df9b53ffc21a329e89a546a38e75/raw300.gif,key=edaee640a9667344,emoji_id=9f61df9b53ffc21a329e89a546a38e75,emoji_package_id=195537]"
+                welcome_image = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "welcome", "hello.png")
                 # 欢迎文字
-                welcome_message = "✨ 你好！我是小天，很高兴能为这个群组服务！\n我可以提供天文知识、天气查询、天文竞答等功能，请多多关照～"
+                welcome_message = "✨ 你好！我是小天，很高兴能为你服务！\n我可以提供天文知识、天气查询、天文竞答等功能，请多多关照～在群聊中输入小天就可以唤醒我啦"
                 
                 # 仅向新添加的群组发送欢迎消息
                 for group in added_groups:
@@ -378,6 +378,7 @@ class RootManager:
                 print(f"向新群组发送欢迎消息失败：{e}")
                 pass
                 
+        
         return (f"✅ 目标群组已设置：{', '.join(groups)}", None)
     
     def _remove_target_groups(self, groups: List[str]) -> Tuple[str, None]:
@@ -410,7 +411,7 @@ class RootManager:
                 time.sleep(wait_time + random.uniform(-1, 1))
                 # 先发送图片，后发送文本
                 print(f"先发送图片到群组 {group_id}")
-                self.settings['qq_send_callback']('group', group_id, None, image_path)
+                self.settings['qq_send_callback']('group', group_id, None, image_path )
                     # 添加短暂延时，确保图片发送完成
                 time.sleep(10 + random.uniform(0, 1))
                 # 如果有文本消息，再发送文本

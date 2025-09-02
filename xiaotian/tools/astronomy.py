@@ -213,7 +213,10 @@ class AstronomyPoster:
     def process_astronomy_content(self, content: str, user_id: str = None, group_id: str = None, ai_optimizer=None) -> Tuple[str, str]:
         """处理天文内容并创建海报"""
         # 提取触发短语后的内容
-        match = re.search(r"小天，每日天文做好啦：([\s\S]*)", content)
+        match = re.search(
+            r"(?:每日天文：|小天，每日天文做好啦：|小天，每日天文做好了：)([\s\S]*)",
+            content
+        )
         if not match:
             return None, "未找到正确格式的内容"
         
