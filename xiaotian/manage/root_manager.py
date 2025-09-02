@@ -577,9 +577,8 @@ class RootManager:
         """更换AI模型"""
         # 模型映射表
         model_mapping = {
-            'ds': 'deepseek-chat',
-            'deepseek': 'deepseek-chat',
-            'reasoner': 'deepseek-reasoner',
+            'k1': 'moonshot-v1-8k',
+            'k2': 'kimi-k2-0711-preview',
         }
         
         if not model_param:

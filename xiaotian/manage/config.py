@@ -1,12 +1,12 @@
 import os
 
 # DeepSeek API配置
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY")
+MOONSHOT_BASE_URL = "https://api.moonshot.cn/v1"
 
 # 默认使用DeepSeek API
-API_KEY = DEEPSEEK_API_KEY
-BASE_URL = DEEPSEEK_BASE_URL
+API_KEY = MOONSHOT_API_KEY
+BASE_URL = MOONSHOT_BASE_URL
 
 
 # QQ机器人配置
@@ -19,7 +19,7 @@ XIAOTIAN_NAME = "小天"
 TRIGGER_WORDS = ["小天"]  # 唤醒词
 DAILY_ASTRONOMY_MESSAGE = "今天的每日天文来啦"
 MAX_MEMORY_COUNT = 20  # 最大记忆消息数
-USE_MODEL = "deepseek-chat"
+USE_MODEL = "moonshot-v1-8k"
 # API限速配置
 GLOBAL_RATE_LIMIT = 120  # 每分钟全局调用次数
 USER_RATE_LIMIT = 40     # 每分钟每个用户调用次数

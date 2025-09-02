@@ -430,8 +430,8 @@ class XiaotianQQBot:
         self.root_id = root_id
         
         # 检查API密钥
-        if not os.getenv("DEEPSEEK_API_KEY"):
-            self._log.error("❌ 请设置环境变量 DEEPSEEK_API_KEY")
+        if not os.getenv("MOONSHOT_API_KEY"):
+            self._log.error("❌ 请设置环境变量 MOONSHOT_API_KEY")
             return
         
         # 初始化AI和调度器
