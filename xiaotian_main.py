@@ -11,7 +11,6 @@ import asyncio
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Set
-
 # 添加项目路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -131,7 +130,7 @@ class XiaotianQQBot:
         self.bot.add_group_event_handler(self.on_group_message)
         
         # 注册请求处理（好友申请和群邀请）
-        self.bot.add_request_event_handler(self.on_request)
+        # self.bot.add_request_event_handler(self.on_request)
         
         # 注册群组通知事件处理（如新成员入群）
         self.bot.add_notice_event_handler(self.on_group_notice)
@@ -269,7 +268,17 @@ class XiaotianQQBot:
         
         user_id = str(msg.user_id)
         group_id = str(msg.group_id)
-        user_key = f"{user_id}_{group_id}"  # 群聊中的用户唯一标识
+        user_key = f"{user_id}_{group_id}"
+        
+        # 检查是否在目标群组内
+        if self.scheduler and hasattr(self.scheduler, 'root_manager'):
+            target_groups = self.scheduler.root_manager.get_target_groups()
+            if group_id not in target_groups:
+                self._log.info(f"群 {group_id} 不在目标群组列表，忽略消息")
+                return
+        else:
+            self._log.info(f"这个错误说明出现大问题了")
+            return
         
         # 检查是否是黑名单用户
         if user_id in self.user_blacklist:
@@ -495,7 +504,16 @@ class XiaotianQQBot:
             if user_id == self_id:
                 self._log.info(f"机器人自己加入群 {group_id}，不发送欢迎消息")
                 return
-            
+                    
+            # 检查是否在目标群组内
+            if self.scheduler and hasattr(self.scheduler, 'root_manager'):
+                target_groups = self.scheduler.root_manager.get_target_groups()
+                if group_id not in target_groups:
+                    self._log.info(f"群 {group_id} 不在目标群组列表，忽略消息")
+                    return
+            else:
+                self._log.info(f"这个错误说明出现大问题了")
+                return
             # 生成欢迎消息
             welcome_message = self.scheduler.welcome_manager.process_group_increase_notice(notice)
             

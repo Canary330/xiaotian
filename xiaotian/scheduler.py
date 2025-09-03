@@ -245,7 +245,7 @@ class XiaotianScheduler:
         
         # 设置月度任务 - 每月1号执行
         # 注意月度合集应该在1号生成上个月的合集
-        self.scheduler.daily_at(MONTHLY_ASTRONOMY_TIME, self.astronomy.monthly_astronomy_task)
+        # self.scheduler.daily_at(MONTHLY_ASTRONOMY_TIME, self.astronomy.monthly_astronomy_task)
         
         self.scheduler.daily_at(MONTHLY_LIKE_REWARD_TIME, self.monthly_like_reward_task)
 
@@ -269,7 +269,7 @@ class XiaotianScheduler:
                 # 检查是否有活跃的天文竞答
                 if hasattr(self, 'astronomy_quiz') and self.astronomy_quiz and self.astronomy_quiz.active_quizzes:
                     # 有活跃竞答，进入频繁检查循环
-                    for _ in range(20):  # 20次循环，每次3秒，共60秒
+                    for _ in range(200):  # 200次循环，每次3秒，共600秒
                         time.sleep(3)  # 每3秒检查一次
                         
                         # 检查是否还有活跃竞答
@@ -559,10 +559,10 @@ class XiaotianScheduler:
         if group_id:
             emotion = self.ai.detect_emotion(message)
             if emotion in ('cold', 'hot'):
-                # if self.root_manager.can_auto_trigger(group_id):
-                should_auto_trigger = True
-                self.root_manager.record_auto_trigger(group_id)
-                print(f"群 {group_id} 自动触发响应，情绪: {emotion}")
+                if self.root_manager.can_auto_trigger(group_id):
+                    should_auto_trigger = True
+                    self.root_manager.record_auto_trigger(group_id)
+                    print(f"群 {group_id} 自动触发响应，情绪: {emotion}")
         else:
             emotion = None
         

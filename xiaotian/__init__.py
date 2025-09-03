@@ -8,8 +8,10 @@ __description__ = "专业的天文观测助手AI智能体"
 
 from .ai.ai_core import XiaotianAI
 from .scheduler import XiaotianScheduler
+from .manage.root_manager import RootManager
 
 __all__ = [
     "XiaotianAI",
-    "XiaotianScheduler"
+    "XiaotianScheduler",
+    "RootManager"
 ]

@@ -363,31 +363,31 @@ class RootManager:
             
         self.save_settings()
         
-        # 向新添加的目标群组发送欢迎图片和文字
-        if self.settings['qq_send_callback'] and self.ai and added_groups:
-            try:
-                # 欢迎图片路径
-                welcome_image = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "welcome", "hello.png")
-                # 欢迎文字
-                welcome_message = (
-                    "✨ 你好！我是小天，很高兴能为你服务！\n"
-                    "我可以提供天文知识、天气查询、天文竞答等功能，请多多关照～在群聊中输入小天就可以唤醒我啦"
-                    "\n\n🌸 你可以使用以下命令唤醒小天喵 🌸\n"
-                    "🐣 发送「小天」唤醒机器人，如果你想要人工为你解答，请@我\n"
-                    "🧸 问我任何问题，我会尽力回答，聊天互动可以提升或降低好感度\n"
-                    "🎀 发送「小天 天文竞答 题目数量」参与知识问答并按时间逻辑获得巨额好感度；如果参与人数大于3，即使回答错误，好感度也不会下降哦\n"
-                    "🎀 发送「小天 案件还原」参与案件推理并获得200好感度\n"
-                    "🍭 发送「小天，与 @用户 对冲 n 好感度」对冲掉对方的好感度\n"
-                    "🐰 小天对每位用户都有不同的性格，你也可以发送「小天，更改性格」或「小天，回到最初的性格」改变性格\n"
-                    "💖 每个月我们会根据好感度排名发放礼物，好感度靠前的uu可以获得精美礼品喵\n"
-                )
+        # # 向新添加的目标群组发送欢迎图片和文字
+        # if self.settings['qq_send_callback'] and self.ai and added_groups:
+        #     try:
+        #         # 欢迎图片路径
+        #         welcome_image = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "welcome", "hello.png")
+        #         # 欢迎文字
+        #         welcome_message = (
+        #             "✨ 你好！我是小天，很高兴能为你服务！\n"
+        #             "我可以提供天文知识、天气查询、天文竞答等功能，请多多关照～在群聊中输入小天就可以唤醒我啦"
+        #             "\n\n🌸 你可以使用以下命令唤醒小天喵 🌸\n"
+        #             "🐣 发送「小天，」唤醒机器人，如果你想要人工为你解答，请@我\n"
+        #             "🧸 问我任何问题，我会尽力回答，聊天互动可以提升或降低好感度\n"
+        #             "🎀 发送「小天 天文竞答 题目数量」参与知识问答并按时间逻辑获得巨额好感度；如果参与人数大于3，即使回答错误，好感度也不会下降哦\n"
+        #             "🎀 发送「小天 案件还原」参与案件推理并获得200好感度\n"
+        #             "🍭 发送「小天，与 @用户 对冲 n 好感度」对冲掉对方的好感度\n"
+        #             "🐰 小天对每位用户都有不同的性格，你也可以发送「小天，更改性格」或「小天，回到最初的性格」改变性格\n"
+        #             "💖 每个月我们会根据好感度排名发放礼物，好感度靠前的uu可以获得精美礼品喵\n"
+        #         )
                 
-                # 仅向新添加的群组发送欢迎消息
-                for group in added_groups:
-                    self._send_welcome_message_to_groups(welcome_message, welcome_image, group_id=group)
-            except Exception as e:
-                print(f"向新群组发送欢迎消息失败：{e}")
-                pass
+        #         # 仅向新添加的群组发送欢迎消息
+        #         for group in added_groups:
+        #             self._send_welcome_message_to_groups(welcome_message, welcome_image, group_id=group)
+        #     except Exception as e:
+        #         print(f"向新群组发送欢迎消息失败：{e}")
+        #         pass
                 
         
         return (f"✅ 目标群组已设置：{', '.join(groups)}", None)

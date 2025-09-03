@@ -33,7 +33,7 @@ class CriminalCase:
         self.reward_solve_case = 200  # 成功解决案件的奖励好感度
         
         # 超时时间设置 (4小时)
-        self.case_timeout = 4 * 60 * 60  # 秒
+        self.case_timeout = 10 * 60  # 秒
     
     def start_case(self, group_id: str, user_id: str) -> str:
         """

@@ -494,7 +494,7 @@ class AstronomyQuiz:
                     reward = 5
                     result_message += f"👤 [CQ:at,qq={u_id}]：参与奖励 +{reward:.2f} 好感度\n"
                 else:
-                    result_message += f"👤 [CQ:at,qq={u_id}]：{score:.2f}，将扣除该成绩下1/4好感度\n"
+                    result_message += f"👤 [CQ:at,qq={u_id}]：{score:.2f}，将扣除该成绩下1/16好感度\n"
         
         # 清理该群的竞答状态
         try:
@@ -662,8 +662,8 @@ class AstronomyQuiz:
                     like_change = points
                     self.ai.update_user_like(user_memory_key, like_change)
                 elif not is_correct and points > 0:
-                    # 答错，好感度减去分数除以4，保留2位小数
-                    like_change = -round(points / 4, 2)
+                    # 答错，好感度减去分数除以18，保留2位小数
+                    like_change = -round(points / 18, 2)
                     self.ai.update_user_like(user_memory_key, like_change)
             except Exception as e:
                 print(f"❌ 更新好感度时出错: {e}")

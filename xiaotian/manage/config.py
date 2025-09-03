@@ -16,7 +16,7 @@ BLACKLIST_USER_IDS = [user_id.strip() for user_id in os.getenv("QQ_BLACKLIST", "
 
 # 小天基础配置
 XIAOTIAN_NAME = "小天"
-TRIGGER_WORDS = ["小天"]  # 唤醒词
+TRIGGER_WORDS = ["小天，"]  # 唤醒词
 DAILY_ASTRONOMY_MESSAGE = "今天的每日天文来啦"
 MAX_MEMORY_COUNT = 20  # 最大记忆消息数
 USE_MODEL = "moonshot-v1-8k"
