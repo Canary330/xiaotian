@@ -20,7 +20,18 @@ class MessageSender:
             group_id: 指定的群组ID，如果提供则只发送到这个群组
         """
         if self.root_manager.settings['qq_send_callback']:
-            target_groups = [group_id] if group_id else self.root_manager.settings['target_groups']
+            all_target_groups = self.root_manager.get_target_groups()
+            
+            # 如果指定了group_id，则只发送到该群组，但前提是它在目标群组列表中
+            if group_id:
+                if group_id in all_target_groups:
+                    target_groups = [group_id]
+                else:
+                    print(f"警告：尝试向非目标群组 {group_id} 发送消息，已阻止。")
+                    return
+            else:
+                target_groups = all_target_groups
+
             for group_id in target_groups:
                 try:
                     print(f"正在发送消息到群组 {group_id}...")

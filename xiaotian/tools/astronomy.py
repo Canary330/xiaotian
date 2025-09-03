@@ -355,6 +355,12 @@ class AstronomyPoster:
                         threading.Thread(target=send_delayed_messages).start()
                         
                     else:
+                        # 群聊发送：检查是否为目标群组
+                        target_groups = self.root_manager.get_target_groups()
+                        if group_id not in target_groups:
+                            print(f"警告：尝试向非目标群组 {group_id} 发送海报消息，已阻止。")
+                            return
+                            
                         # 群聊发送：先发图片，再发提示消息，最后发点评
                         self.root_manager.settings['qq_send_callback']('group', group_id, None, auto_poster_path)
                         

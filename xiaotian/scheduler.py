@@ -281,6 +281,12 @@ class XiaotianScheduler:
                             if quiz and not quiz.get("participants"):  # 只在没人回答时检查超时
                                 current_time = datetime.now()
                                 if "start_time" in quiz and (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
+                                    # 检查群组是否在目标群组列表中
+                                    target_groups = self.root_manager.get_target_groups()
+                                    if group_id not in target_groups:
+                                        print(f"警告：尝试向非目标群组 {group_id} 发送竞答超时消息，已阻止。")
+                                        continue
+                                    
                                     # 如果当前题目已超时，处理超时
                                     result_msg1, result_msg2 = self.astronomy_quiz.handle_question_timeout(group_id)
                                     if self.root_manager.settings.get('qq_send_callback'):

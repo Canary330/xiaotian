@@ -82,6 +82,13 @@ class XiaotianQQBot:
 
             # 发送群聊消息
             if msg_type == 'group':
+                # 检查是否为目标群组
+                if self.scheduler and hasattr(self.scheduler, 'root_manager'):
+                    target_groups = self.scheduler.root_manager.get_target_groups()
+                    if target_id not in target_groups:
+                        self._log.warning(f"警告：尝试向非目标群组 {target_id} 发送消息，已阻止。")
+                        return
+                
                 if valid_image_ and not message:
                     # 仅发送图片消息
                     self.bot.api.post_group_msg_sync(group_id=int(target_id), image=image_path)

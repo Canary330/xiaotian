@@ -415,6 +415,12 @@ class RootManager:
         import random
         
         if self.settings['qq_send_callback'] and group_id:
+            # 检查是否为目标群组
+            target_groups = self.get_target_groups()
+            if group_id not in target_groups:
+                print(f"警告：尝试向非目标群组 {group_id} 发送欢迎消息，已阻止。")
+                return
+                
             try:
                 print(f"正在发送欢迎消息到群组 {group_id}...")
                 # 处理图片路径
