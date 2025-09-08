@@ -5,6 +5,7 @@
 
 import sys
 import os
+import re
 import random
 import threading
 import asyncio
@@ -348,8 +349,21 @@ class XiaotianQQBot:
                     sleep_time = 3 + random.uniform(0, 1)
                     self.scheduler.add_response_wait_time(sleep_time)
                     # 检查是否为余额不足错误
-                    if cleaned_response == "抱歉，我遇到了一些问题：Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknownerror', 'param': None, 'code': 'invalidrequest_error'}}":
-                        cleaned_response = "小天包里没钱啦，能不能拜托你联系一下会长，求求啦"
+                    error_map = {
+                        402: "包里没钱啦~",
+                        401: "钥匙不对，开不了门~",
+                        429: "大家太热情啦，慢一点嘛~",
+                        500: "服务器打了个盹~",
+                        503: "小伙伴太忙啦，等一下~",
+                    }
+                    # 正则匹配错误码
+                    match = re.search(r"Error code:\s*(\d+)", cleaned_response)
+
+                    if match:
+                        code = int(match.group(1))   # 提取数字，比如 402
+                        if code in error_map:
+                            cleaned_response = error_map[code]
+
                     await asyncio.sleep(sleep_time)
                     if len(self.replying_users) <= 1:
                         await self.bot.api.post_group_msg(group_id=int(group_id), text=cleaned_response)
@@ -462,7 +476,7 @@ class XiaotianQQBot:
             
         # 运行机器人
         try:
-            self._log.info(f"正在启动小天QQ机器人，QQ号: {bot_uin}")
+            self._log.info(f"正在启动QQ机器人，QQ号: {bot_uin}")
             self.bot.run(bt_uin=bot_uin, root=root_id)
         except Exception as e:
             self._log.error(f"启动失败: {str(e)}")

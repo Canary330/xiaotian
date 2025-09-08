@@ -442,8 +442,10 @@ class XiaotianAI:
         target_like = target_status['total_like']
         
         # 如果没有指定对冲金额，返回用户当前状态和可选择的范围
+        from xiaotian.manage.config import XIAOTIAN_NAME
+        mascot_name = XIAOTIAN_NAME
         if transfer_amount is None:
-            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：小天，与[@用户]对冲[金额]"
+            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：{mascot_name}，与[@用户]对冲[金额]"
         
         # 验证对冲金额
         if transfer_amount <= 0:

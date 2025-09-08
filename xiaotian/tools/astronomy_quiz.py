@@ -10,7 +10,7 @@ import json
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timedelta
 
-from ..manage.config import TRIGGER_WORDS
+from ..manage.config import TRIGGER_WORDS, XIAOTIAN_NAME, QUIZ_NAME
 from ..manage.root_manager import RootManager
 from ..ai.ai_core import XiaotianAI
 
@@ -71,9 +71,9 @@ class AstronomyQuiz:
                         question["used"] = 0
                     if "difficulty" not in question:
                         question["difficulty"] = "normal"
-                        
-                print(f"✓ 从文件加载天文竞答题库成功，共 {len(self.question_bank)} 题")
-                    
+
+                print(f"✓ 从文件加载{QUIZ_NAME}题库成功，共 {len(self.question_bank)} 题")
+
             except Exception as e:
                 print(f"❌ 加载题库文件失败: {e}")
                 # 创建一个空题库
@@ -85,7 +85,7 @@ class AstronomyQuiz:
             
         # 计算未使用的题目数量
         unused_count = sum(1 for q in self.question_bank if q.get("used", 0) == 0)
-        print(f"✓ 天文竞答题库加载完成，共 {len(self.question_bank)} 题，其中未使用 {unused_count} 题")
+        print(f"✓ {QUIZ_NAME}题库加载完成，共 {len(self.question_bank)} 题，其中未使用 {unused_count} 题")
 
         
     def _save_question_bank(self):
@@ -97,9 +97,9 @@ class AstronomyQuiz:
             # 保存题库
             with open(self.question_file, 'w', encoding='utf-8') as f:
                 json.dump(self.question_bank, f, ensure_ascii=False, indent=2)
-                
-            print(f"✓ 天文竞答题库已保存至文件")
-            
+
+            print(f"✓ {QUIZ_NAME}题库已保存至文件")
+
         except Exception as e:
             print(f"❌ 保存题库失败: {e}")
             
@@ -117,7 +117,7 @@ class AstronomyQuiz:
             self._save_question_bank()
             
             # 构建通知消息
-            message = (f"🔄 天文竞答题库已经全部使用完毕，已重置所有题目标记\n"
+            message = (f"🔄 {QUIZ_NAME}题库已经全部使用完毕，已重置所有题目标记\n"
                       f"📊 题库总题数：{len(self.question_bank)}道\n"
                       f"🕒 重置时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
@@ -921,8 +921,8 @@ class AstronomyQuiz:
         easy = sum(1 for q in self.question_bank if q.get("difficulty", "normal").lower() == "easy")
         normal = sum(1 for q in self.question_bank if q.get("difficulty", "normal").lower() == "normal")
         difficult = sum(1 for q in self.question_bank if q.get("difficulty", "normal").lower() == "difficult")
-        
-        result = f"天文竞答题库统计：\n"
+
+        result = f"{QUIZ_NAME}题库统计：\n"
         result += f"总题目数：{total} 题\n"
         result += f"已使用：{used} 题，未使用：{unused} 题\n\n"
         result += f"题目类型分布：\n"
@@ -1038,7 +1038,7 @@ class AstronomyQuiz:
         end_index = min(start_index + page_size, total_questions)
         
         # 构建题目列表信息
-        result = f"📚 天文竞答题库（第 {page}/{total_pages} 页，共 {total_questions} 题）\n\n"
+        result = f"📚 {QUIZ_NAME}（第 {page}/{total_pages} 页，共 {total_questions} 题）\n\n"
         
         for i in range(start_index, end_index):
             q = self.question_bank[i]
@@ -1062,8 +1062,8 @@ class AstronomyQuiz:
             result += "\n"
             
         # 添加翻页提示
-        result += f"\n📝 查看其他页请使用：小天，天文题库 [页码]"
-        
+        result += f"\n📝 查看其他页请使用：{XIAOTIAN_NAME}，天文题库 [页码]"
+
         return result
         
     def get_statistics(self, group_id: str = None) -> str:
@@ -1084,7 +1084,7 @@ class AstronomyQuiz:
             
             correct_count = sum(1 for p in quiz["participants"].values() if p.get("correct", False))
             
-            stats = (f"📊 天文竞答统计 (本群)\n"
+            stats = (f"📊 {QUIZ_NAME}统计 (本群)\n"
                     f"⏱️ 状态：进行中，剩余时间 {remaining_time:.1f} 秒\n"
                     f"👥 已参与人数：{len(quiz['participants'])} 人\n"
                     f"✅ 已答对人数：{correct_count} 人\n"
@@ -1094,7 +1094,7 @@ class AstronomyQuiz:
             active_count = len(self.active_quizzes)
             top_users = sorted(self.user_scores.items(), key=lambda x: x[1]["points"], reverse=True)[:5]
             
-            stats = (f"📊 天文竞答全局统计\n"
+            stats = (f"📊 {QUIZ_NAME}全局统计\n"
                    f"⏱️ 当前活跃竞答数：{active_count} 个\n"
                    f"📚 题库数量：{len(self.question_bank)} 题\n")
             

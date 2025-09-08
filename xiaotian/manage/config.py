@@ -1,4 +1,5 @@
 import os
+import json
 
 # DeepSeek API配置
 MOONSHOT_API_KEY = os.getenv("MOONSHOT_API_KEY")
@@ -15,9 +16,67 @@ ADMIN_USER_IDS = [admin_id.strip() for admin_id in os.getenv("QQ_ADMIN_USERS", "
 BLACKLIST_USER_IDS = [user_id.strip() for user_id in os.getenv("QQ_BLACKLIST", "").split(",") if user_id.strip()]
 
 # 小天基础配置
-XIAOTIAN_NAME = "小天"
-TRIGGER_WORDS = ["小天，"]  # 唤醒词
-DAILY_ASTRONOMY_MESSAGE = "今天的每日天文来啦"
+DEFAULT_XIAOTIAN_NAME = "小天"
+DEFAULT_TRIGGER_WORDS = ["小天，"]  # 默认唤醒词
+DEFAULT_DAILY_MESSAGE = "每日天文"
+DEFAULT_QUIZ_NAME = "天文竞答"
+DEFAULT_CHARACTER_TRAIT = "热爱天文"
+
+# 从root_settings.json中加载自定义设置
+ROOT_SETTINGS_FILE = "data/root_settings.json"
+
+# 动态全局变量，可通过reload_config()重新加载
+XIAOTIAN_NAME = DEFAULT_XIAOTIAN_NAME
+TRIGGER_WORDS = DEFAULT_TRIGGER_WORDS
+DAILY_ASTRONOMY_MESSAGE = DEFAULT_DAILY_MESSAGE
+QUIZ_NAME = DEFAULT_QUIZ_NAME
+CHARACTER_TRAIT = DEFAULT_CHARACTER_TRAIT
+
+def reload_config():
+    """
+    动态重新加载配置文件
+    这个函数允许在运行时刷新配置，使得修改立即生效而无需重启程序
+    当root_manager执行set命令修改配置时，会自动调用此函数
+    """
+    global XIAOTIAN_NAME, TRIGGER_WORDS, DAILY_ASTRONOMY_MESSAGE, QUIZ_NAME, CHARACTER_TRAIT
+    
+    try:
+        if os.path.exists(ROOT_SETTINGS_FILE):
+            with open(ROOT_SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                root_settings = json.load(f)
+                # 读取自定义配置（如果存在）
+                XIAOTIAN_NAME = root_settings.get('mascot_name', DEFAULT_XIAOTIAN_NAME)
+                DAILY_ASTRONOMY_MESSAGE = root_settings.get('daily_name', DEFAULT_DAILY_MESSAGE)
+                QUIZ_NAME = root_settings.get('quiz_name', DEFAULT_QUIZ_NAME)
+                CHARACTER_TRAIT = root_settings.get('character_trait', DEFAULT_CHARACTER_TRAIT)
+                # 构建自定义唤醒词
+                custom_trigger = root_settings.get('mascot_name', DEFAULT_XIAOTIAN_NAME)
+                TRIGGER_WORDS = [custom_trigger]
+                print(f"✅ 配置已重新加载: 吉祥物名称={XIAOTIAN_NAME}, 唤醒词={TRIGGER_WORDS}")
+                return True
+        else:
+            # 使用默认值
+            XIAOTIAN_NAME = DEFAULT_XIAOTIAN_NAME
+            TRIGGER_WORDS = DEFAULT_TRIGGER_WORDS
+            DAILY_ASTRONOMY_MESSAGE = DEFAULT_DAILY_MESSAGE
+            QUIZ_NAME = DEFAULT_QUIZ_NAME
+            CHARACTER_TRAIT = DEFAULT_CHARACTER_TRAIT
+            print("⚠️ 未找到配置文件，使用默认值")
+            return False
+    except Exception as e:
+        print(f"❌ 加载自定义设置失败: {e}，使用默认设置")
+        # 使用默认值
+        XIAOTIAN_NAME = DEFAULT_XIAOTIAN_NAME
+        TRIGGER_WORDS = DEFAULT_TRIGGER_WORDS
+        DAILY_ASTRONOMY_MESSAGE = DEFAULT_DAILY_MESSAGE
+        QUIZ_NAME = DEFAULT_QUIZ_NAME
+        CHARACTER_TRAIT = DEFAULT_CHARACTER_TRAIT
+        return False
+
+# 初始加载配置
+reload_config()
+
+# DAILY_ASTRONOMY_MESSAGE 已在reload_config中设置
 MAX_MEMORY_COUNT = 20  # 最大记忆消息数
 USE_MODEL = "moonshot-v1-8k"
 # API限速配置

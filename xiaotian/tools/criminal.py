@@ -47,17 +47,22 @@ class CriminalCase:
             str: 新案件的介绍信息
         """
         # 检查该群是否有正在进行的案件
+        from xiaotian.manage.config import XIAOTIAN_NAME
+        mascot_name = XIAOTIAN_NAME
         if group_id in self.active_cases:
-            return "⚠️ 本群已有一个正在进行的案件推理，请先完成当前案件或输入'小天 结束案件'来结束当前案件。"
+            return f"⚠️ 本群已有一个正在进行的案件推理，请先完成当前案件或输入'{mascot_name} 结束案件'来结束当前案件。"
         
         # 使用AI生成一个与天文有关的案件
+        from xiaotian.manage.config import XIAOTIAN_NAME, CHARACTER_TRAIT
+        mascot_name = XIAOTIAN_NAME
+        personality = CHARACTER_TRAIT
+        
         case_prompt = (
-            "请你创作一个与天文有关的奇特案件，要求：\n"
-            "1. 案件必须与天文学、宇宙、星球或天体现象有关\n"
-            "2. 案件设定要有趣、奇特且具有想象力\n"
-            "3. 小天是案件的探秘者，可以天马行空地发挥想象力\n"
-            "4. 案件必须有一个出人意料的结局或真相\n"
-            "5. 结局不要太容易猜到，但要合理\n"
+            "请你创作一个奇特案件，要求：\n"
+            "1. 案件主题应该有趣、奇特且具有想象力\n"
+            f"2. {mascot_name}是案件的探秘者，{mascot_name}的性格是{personality}\n"
+            "3. 案件必须有一个出人意料的结局或真相\n"
+            "4. 结局不要太容易猜到，但要合理\n"
             "6. 内容必须简洁，背景不超过150字，线索不超过100字，真相不超过100字\n\n"
             "请严格按以下格式生成：\n"
             "【案件背景】：简明描述案件的背景和发现过程（最多150字）\n"
@@ -116,12 +121,15 @@ class CriminalCase:
             self.active_cases[group_id] = case_state
             
             # 生成案件介绍消息
+            from xiaotian.manage.config import XIAOTIAN_NAME
+            mascot_name = XIAOTIAN_NAME
+            
             case_message = (
-                f"🔍 天文案件还原开始！\n\n"
+                f"🔍 案件还原开始！\n\n"
                 f"🔮【案件背景】{background_part}\n\n"
                 f"🫧【初始线索】{clues_part}\n\n"
-                f"🌌 执政官大人，请根据线索进行推理并发布调查指令！\n"
-                f"提示：输入'小天 结束案件'可提前结束本次案件调查；输入'检查:xxx'则会检查答案的正确性\n"
+                f"🌌 请根据线索进行推理并发布调查指令！\n"
+                f"提示：输入'{mascot_name} 结束案件'可提前结束本次案件调查；输入'检查:xxx'则会检查答案的正确性\n"
                 f"⭐猜中案件有200好感度的奖励"
             )
             
@@ -171,9 +179,9 @@ class CriminalCase:
         # 检查是否要结束案件
         if "结束" in message or "结束案件" in message:
             result_message = (
-                f"📢 应执政官要求，案件调查已结束！\n\n"
+                f"📢 应用户要求，案件调查已结束！\n\n"
                 f"【案件真相】\n{case['truth']}\n\n"
-                f"感谢各位执政官的参与！"
+                f"感谢各位的参与！"
             )
             
             # 清理该群的案件

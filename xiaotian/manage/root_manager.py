@@ -11,7 +11,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 import glob
-from .config import ROOT_ADMIN_DATA_FILE, ASTRONOMY_IMAGES_DIR, ASTRONOMY_FONTS_DIR
+from .config import ROOT_ADMIN_DATA_FILE, ASTRONOMY_IMAGES_DIR, ASTRONOMY_FONTS_DIR, XIAOTIAN_NAME
 
 
 class RootManager:
@@ -22,6 +22,9 @@ class RootManager:
         
         # AI实例（运行时设置）
         self.ai = None
+        
+        # 临时管理员列表（仅在内存中）
+        self.temp_admins = []
         
         # 等待图片的用户命令
         self.pending_operations = {}  # user_id: {"type": "image", "name": "filename"}
@@ -42,12 +45,12 @@ class RootManager:
             
             # 默认设置
             self.settings = {
-                'auto_trigger_groups': data.get('auto_trigger_groups', [815140803]),  # 自动气氛调节的群组
+                'auto_trigger_groups': data.get('auto_trigger_groups', []),  # 自动气氛调节的群组
                 'daily_trigger_limit': data.get('daily_trigger_limit', 2),  # 每日触发限制
                 'today_trigger_count': data.get('today_trigger_count', {}),  # 今日已触发次数
                 'last_trigger_date': data.get('last_trigger_date', ''),  # 上次触发日期
                 'qq_send_callback': None,  # QQ发送回调函数（运行时设置）
-                'target_groups': data.get('target_groups', [815140803]),  # 目标群组
+                'target_groups': data.get('target_groups', []),  # 目标群组
                 'weather_city': data.get('weather_city', '双流'),  # 天气城市
                 'permanent_admins': data.get('permanent_admins', []),  # 常驻管理员QQ号列表
                 'enabled_features': data.get('enabled_features', {
@@ -87,26 +90,7 @@ class RootManager:
                 json.dump(save_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"保存Root设置失败：{e}")
-    
-    # 临时管理员系统
-    def __init__(self, root_id: str):
-        self.root_id = root_id
-        self.settings_file = ROOT_ADMIN_DATA_FILE
-        self.load_settings()
         
-        # AI实例（运行时设置）
-        self.ai = None
-        
-        # 临时管理员列表（仅在内存中）
-        self.temp_admins = []
-        
-        # 等待图片的用户命令
-        self.pending_operations = {}  # user_id: {"type": "image", "name": "filename"}
-
-        # 确保必要的目录存在
-        os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
-        os.makedirs(ASTRONOMY_IMAGES_DIR, exist_ok=True)
-        os.makedirs(ASTRONOMY_FONTS_DIR, exist_ok=True)
     
     def is_root(self, user_id: str) -> bool:
         """检查是否是Root用户或管理员"""
@@ -187,151 +171,159 @@ class RootManager:
                 return result
         
         # 保存图片命令 - 第一步
-        if message.startswith("小天，保存图片："):
-            filename = message.replace("小天，保存图片：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，保存图片："):
+            filename = message.replace(f"{XIAOTIAN_NAME}，保存图片：", "").strip()
             # 记录等待上传图片
             self.pending_operations[user_id] = {"type": "image", "name": filename}
             return ("📸 请发送要保存的图片", None)
         
         
         # 设置目标群组
-        if message.startswith("小天，设置目标群组："):
-            groups = message.replace("小天，设置目标群组：", "").strip().split(',')
+        if message.startswith(f"{XIAOTIAN_NAME}，设置目标群组："):
+            groups = message.replace(f"{XIAOTIAN_NAME}，设置目标群组：", "").strip().split(',')
             return self._set_target_groups([g.strip() for g in groups if g.strip()])
         
         # 移除目标群组
-        if message.startswith("小天，移除目标群组："):
-            groups = message.replace("小天，移除目标群组：", "").strip().split(',')
+        if message.startswith(f"{XIAOTIAN_NAME}，移除目标群组："):
+            groups = message.replace(f"{XIAOTIAN_NAME}，移除目标群组：", "").strip().split(',')
             return self._remove_target_groups([g.strip() for g in groups if g.strip()])
         
         # 添加自动触发群组
-        if message.startswith("小天，添加自动触发群组："):
-            groups = message.replace("小天，添加自动触发群组：", "").strip().split(',')
+        if message.startswith(f"{XIAOTIAN_NAME}，添加自动触发群组："):
+            groups = message.replace(f"{XIAOTIAN_NAME}，添加自动触发群组：", "").strip().split(',')
             return self._add_auto_trigger_groups([g.strip() for g in groups if g.strip()])
         
         # 移除自动触发群组
-        if message.startswith("小天，移除自动触发群组："):
-            groups = message.replace("小天，移除自动触发群组：", "").strip().split(',')
+        if message.startswith(f"{XIAOTIAN_NAME}，移除自动触发群组："):
+            groups = message.replace(f"{XIAOTIAN_NAME}，移除自动触发群组：", "").strip().split(',')
             return self._remove_auto_trigger_groups([g.strip() for g in groups if g.strip()])
         
         # 设置每日触发限制
-        if message.startswith("小天，设置触发限制："):
+        if message.startswith(f"{XIAOTIAN_NAME}，设置触发限制："):
             try:
-                limit = int(message.replace("小天，设置触发限制：", "").strip())
+                limit = int(message.replace(f"{XIAOTIAN_NAME}，设置触发限制：", "").strip())
                 return self._set_trigger_limit(limit)
             except ValueError:
                 return ("❌ 触发限制必须是数字", None)
         
         # 重置今日触发次数
-        if message == "小天，重置触发次数":
+        if message == f"{XIAOTIAN_NAME}，重置触发次数":
             return self._reset_trigger_count()
         
         # 设置天气城市
-        if message.startswith("小天，设置天气城市："):
-            city = message.replace("小天，设置天气城市：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，设置天气城市："):
+            city = message.replace(f"{XIAOTIAN_NAME}，设置天气城市：", "").strip()
             return self._set_weather_city(city)
         
         # 更换模型
-        if message.startswith("小天，更换模型"):
+        if message.startswith(f"{XIAOTIAN_NAME}，更换模型"):
             # 提取模型参数
-            model_param = message.replace("小天，更换模型", "").strip()
+            model_param = message.replace(f"{XIAOTIAN_NAME}，更换模型", "").strip()
             if model_param.startswith("：") or model_param.startswith(":"):
                 model_param = model_param[1:].strip()
             
             return self._change_model(model_param)
         
         # 清理输出文件
-        if message == "小天，清理输出":
+        if message == f"{XIAOTIAN_NAME}，清理输出":
             return self._cleanup_outputs()
         
         # 查看设置
-        if message == "小天，查看设置":
+        if message == f"{XIAOTIAN_NAME}，查看设置":
             return self._show_settings()
+            
+        # 查看自定义设置
+        if message == f"{XIAOTIAN_NAME}，查看自定义设置":
+            return self._show_custom_settings()
             
         # 管理员命令
         # 添加临时管理员
-        if message.startswith("小天，添加临时管理员："):
-            admin_id = message.replace("小天，添加临时管理员：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，添加临时管理员："):
+            admin_id = message.replace(f"{XIAOTIAN_NAME}，添加临时管理员：", "").strip()
             return self._add_temp_admin(admin_id)
             
         # 添加常驻管理员
-        if message.startswith("小天，添加常驻管理员："):
-            admin_id = message.replace("小天，添加常驻管理员：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，添加常驻管理员："):
+            admin_id = message.replace(f"{XIAOTIAN_NAME}，添加常驻管理员：", "").strip()
             return self._add_permanent_admin(admin_id)
             
         # 移除临时管理员
-        if message.startswith("小天，移除临时管理员："):
-            admin_id = message.replace("小天，移除临时管理员：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，移除临时管理员："):
+            admin_id = message.replace(f"{XIAOTIAN_NAME}，移除临时管理员：", "").strip()
             return self._remove_temp_admin(admin_id)
             
         # 移除常驻管理员
-        if message.startswith("小天，移除常驻管理员："):
-            admin_id = message.replace("小天，移除常驻管理员：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，移除常驻管理员："):
+            admin_id = message.replace(f"{XIAOTIAN_NAME}，移除常驻管理员：", "").strip()
             return self._remove_permanent_admin(admin_id)
             
         # 查看管理员列表
-        if message == "小天，查看管理员":
+        if message == f"{XIAOTIAN_NAME}，查看管理员":
             return self._list_admins()
             
         # 题库管理命令
         # 添加题目
-        if message.startswith("小天，添加题目：") and self.ai:
-            content = message.replace("小天，添加题目：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，添加题目：") and self.ai:
+            content = message.replace(f"{XIAOTIAN_NAME}，添加题目：", "").strip()
             return self._add_quiz_question(content)
             
         # 修改题目
-        if message.startswith("小天，修改题目：") and self.ai:
-            content = message.replace("小天，修改题目：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，修改题目：") and self.ai:
+            content = message.replace(f"{XIAOTIAN_NAME}，修改题目：", "").strip()
             return self._edit_quiz_question(content)
             
         # 删除题目
-        if message.startswith("小天，删除题目：") and self.ai:
-            content = message.replace("小天，删除题目：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，删除题目：") and self.ai:
+            content = message.replace(f"{XIAOTIAN_NAME}，删除题目：", "").strip()
             return self._delete_quiz_question(content)
             
         # 查看题库
-        if message == "小天，查看题库" and self.ai:
+        if message == f"{XIAOTIAN_NAME}，查看题库" and self.ai:
             return self._list_quiz_questions()
         
         # 启用/禁用功能
-        if message.startswith("小天，启用功能："):
-            feature = message.replace("小天，启用功能：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，启用功能："):
+            feature = message.replace(f"{XIAOTIAN_NAME}，启用功能：", "").strip()
             return self._toggle_feature(feature, True)
         
-        if message.startswith("小天，禁用功能："):
-            feature = message.replace("小天，禁用功能：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，禁用功能："):
+            feature = message.replace(f"{XIAOTIAN_NAME}，禁用功能：", "").strip()
             return self._toggle_feature(feature, False)
         
         # 列出可用图片和字体
-        if message == "小天，列出图片":
+        if message == f"{XIAOTIAN_NAME}，列出图片":
             return self._list_images()
         
-        if message == "小天，列出字体":
+        if message == f"{XIAOTIAN_NAME}，列出字体":
             return self._list_fonts()
         
         # 发送天气报告
-        if message == "小天，发送天气":
+        if message == f"{XIAOTIAN_NAME}，发送天气":
             return ("SEND_WEATHER", None)
         
         # 发送天文海报
-        if message == "小天，发送海报":
+        if message == f"{XIAOTIAN_NAME}，发送海报":
             return ("SEND_ASTRONOMY", None)
         
+        # 通用助手设置命令
+        if message.startswith("set：") or message.startswith("set:"):
+            return self._handle_custom_settings(message)
+            
         # 生成月度合集
-        if message == "小天，生成月度合集":
+        if message == f"{XIAOTIAN_NAME}，生成月度合集":
             return ("GENERATE_MONTHLY", None)
         
         # 立即执行清理
-        if message == "小天，立即清理":
+        if message == f"{XIAOTIAN_NAME}，立即清理":
             return ("CLEANUP_NOW", None)
         
         # 重置用户like系统
-        if message.startswith("小天，重置like系统："):
-            user_key = message.replace("小天，重置like系统：", "").strip()
+        if message.startswith(f"{XIAOTIAN_NAME}，重置like系统："):
+            user_key = message.replace(f"{XIAOTIAN_NAME}，重置like系统：", "").strip()
             return ("RESET_LIKE_SYSTEM", user_key)
         
         # 重置所有like系统
-        if message == "小天，重置所有like系统":
+        if message == f"{XIAOTIAN_NAME}，重置所有like系统":
             return ("RESET_ALL_LIKE_SYSTEMS", None)
         
         return None
@@ -516,6 +508,30 @@ class RootManager:
         
         return (settings_text.strip(), None)
     
+    def _show_custom_settings(self) -> Tuple[str, None]:
+        """显示当前自定义设置"""
+        try:
+            # 读取root_settings.json文件
+            from ..manage.config import XIAOTIAN_NAME, TRIGGER_WORDS, CHARACTER_TRAIT, DAILY_ASTRONOMY_MESSAGE, QUIZ_NAME
+            
+            # 构建响应消息
+            response = f"""📋 当前自定义设置：
+
+🤖 吉祥物名称：{XIAOTIAN_NAME}
+🔔 唤醒词：{', '.join(TRIGGER_WORDS) if TRIGGER_WORDS else '无'}
+🎭 性格特点：{CHARACTER_TRAIT}
+📝 海报名字：{DAILY_ASTRONOMY_MESSAGE}
+❓ 竞答名字：{QUIZ_NAME}
+
+可通过 set:吉祥物名称+性格+海报名字+竞答名字 命令修改这些设置
+"""
+            return (response, None)
+        except Exception as e:
+            import traceback
+            print(f"获取自定义设置失败：{str(e)}")
+            print(traceback.format_exc())
+            return (f"❌ 获取自定义设置失败：{str(e)}", None)
+    
     def _toggle_feature(self, feature: str, enabled: bool) -> Tuple[str, None]:
         """启用/禁用功能"""
         if feature in self.settings['enabled_features']:
@@ -650,6 +666,96 @@ class RootManager:
     def get_target_groups(self) -> List[str]:
         """获取目标群组"""
         return self.settings['target_groups']
+    
+    def _handle_custom_settings(self, message: str) -> Tuple[str, Any]:
+        """处理通用助手设置命令"""
+        try:
+            # 移除前缀
+            if message.startswith("set："):
+                content = message[3:].strip()
+            else:  # set:
+                content = message[4:].strip()
+                
+            # 解析参数：吉祥物名称+性格+海报名字+竞答名字
+            parts = content.split(' ')
+            
+            # 加载当前设置
+            settings_path = "data/root_settings.json"
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+            else:
+                settings = {}
+            
+            # 更新设置并同时应用到运行时
+            from ..manage.config import XIAOTIAN_NAME, TRIGGER_WORDS, DAILY_ASTRONOMY_MESSAGE, QUIZ_NAME, CHARACTER_TRAIT
+            
+            # 更新吉祥物名称和唤醒词
+            if len(parts) >= 1 and parts[0].strip():
+                mascot_name = parts[0].strip()
+                settings['mascot_name'] = mascot_name
+                # 动态修改全局变量
+                import xiaotian.manage.config
+                xiaotian.manage.config.XIAOTIAN_NAME = mascot_name
+                # 更新唤醒词
+                trigger_word = mascot_name + "，"
+                xiaotian.manage.config.TRIGGER_WORDS = [trigger_word]
+            else:
+                mascot_name = XIAOTIAN_NAME
+            
+            # 更新性格特点
+            if len(parts) >= 2 and parts[1].strip():
+                character = parts[1].strip()
+                settings['character_trait'] = character
+                xiaotian.manage.config.CHARACTER_TRAIT = character
+            else:
+                character = CHARACTER_TRAIT
+            
+            # 更新海报名称
+            if len(parts) >= 3 and parts[2].strip():
+                daily_name = parts[2].strip()
+                settings['daily_name'] = daily_name
+                xiaotian.manage.config.DAILY_ASTRONOMY_MESSAGE = daily_name
+            else:
+                daily_name = DAILY_ASTRONOMY_MESSAGE
+            
+            # 更新竞答名称
+            if len(parts) >= 4 and parts[3].strip():
+                quiz_name = parts[3].strip()
+                settings['quiz_name'] = quiz_name
+                xiaotian.manage.config.QUIZ_NAME = quiz_name
+            else:
+                quiz_name = QUIZ_NAME if 'QUIZ_NAME' in dir(xiaotian.manage.config) else "天文竞答"
+            
+            # 保存设置到文件
+            os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+            with open(settings_path, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, ensure_ascii=False, indent=2)
+            
+            # 调用reload_config()重新加载配置，确保变更即时生效
+            import xiaotian.manage.config
+            xiaotian.manage.config.reload_config()
+            
+            # 更新其他依赖于配置的组件
+            if self.ai:
+                # 更新AI提示词中的名称
+                for i, prompt in enumerate(self.ai.XIAOTIAN_SYSTEM_PROMPT):
+                    if "你叫小天" in prompt:
+                        self.ai.XIAOTIAN_SYSTEM_PROMPT[i] = prompt.replace("你叫小天", f"你叫{mascot_name}")
+            
+            # 构建响应消息
+            response = (f"✅ 设置已更新并立即生效\n"
+                       f"吉祥物名称（唤醒词）：{mascot_name}\n"
+                       f"性格特点：{character}\n"
+                       f"海报名字：{daily_name}\n"
+                       f"竞答名字：{quiz_name}")
+            
+            return (response, None)
+        except Exception as e:
+            import traceback
+            print(f"设置更新失败：{str(e)}")
+            print(traceback.format_exc())
+            return (f"❌ 设置更新失败：{str(e)}\n请使用格式：set：吉祥物名称+性格特点+海报名字+竞答名字", None)
         
     # 管理员相关命令处理
     def _add_temp_admin(self, admin_id: str) -> Tuple[str, Any]:

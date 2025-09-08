@@ -61,7 +61,7 @@ class AstronomyPoster:
             if not self.root_manager.is_feature_enabled('daily_astronomy'):
                 return
 
-            print(f"🔭 {dt.now().strftime('%H:%M')} - 执行每日天文海报任务")
+            print(f"🔭 {dt.now().strftime('%H:%M')} - 执行{DAILY_ASTRONOMY_MESSAGE}海报任务")
 
             if self.last_astronomy_post:
                 # 如果有上次处理的天文海报，使用它
@@ -108,9 +108,10 @@ class AstronomyPoster:
             )
             
             if poster_path:
+                astronomy_message = f"今天的{DAILY_ASTRONOMY_MESSAGE}来啦"
                 # 保存最近的海报路径和消息，供定时任务使用
-                self.last_astronomy_post = (poster_path, DAILY_ASTRONOMY_MESSAGE)
-                
+                self.last_astronomy_post = (poster_path, astronomy_message)
+
                 # 向发送天文内容的用户直接回复海报
                 if self.root_manager.settings['qq_send_callback']:
                     try:
@@ -144,7 +145,7 @@ class AstronomyPoster:
             # 检查天文海报模块是否处于等待图片状态
             if not self.waiting_for_images:
                 print("当前不在等待图片状态，忽略此图片")
-                return "您需要先发送天文内容（以\"小天，每日天文做好啦：\"开头），再上传图片；私聊不会识别表情图等内容，请不要随意发送图片"
+                return f"您需要先发送天文内容（以\"小天，{DAILY_ASTRONOMY_MESSAGE}做好啦：\"开头），再上传图片；私聊不会识别表情图等内容，请不要随意发送图片"
             
             # 调用天文海报模块处理用户消息和图片
             poster_path, message = self.process_user_message("", [image_path])
@@ -213,10 +214,28 @@ class AstronomyPoster:
     def process_astronomy_content(self, content: str, user_id: str = None, group_id: str = None, ai_optimizer=None) -> Tuple[str, str]:
         """处理天文内容并创建海报"""
         # 提取触发短语后的内容
-        match = re.search(
-            r"(?:每日天文：|小天，每日天文做好啦：|小天，每日天文做好了：)([\s\S]*)",
-            content
-        )
+        # 使用实际的 DAILY_ASTRONOMY_MESSAGE 值构造正则表达式
+        trigger_phrases = [
+            f"{DAILY_ASTRONOMY_MESSAGE}：",
+            f"小天，{DAILY_ASTRONOMY_MESSAGE}做好啦：",
+            f"小天，{DAILY_ASTRONOMY_MESSAGE}做好了："
+        ]
+        try:
+            match = re.match(r"(?:{})\s*([\s\S]*)".format("|".join(map(re.escape, trigger_phrases))), content)
+        except Exception as e:
+            print(f"正则匹配异常: {e}，尝试自动处理不合法字符")
+            # 自动处理不合法字符（如替换不可见字符、全角冒号等）
+            safe_content = content.replace('：', ':').replace('\u200b', '').replace('\u3000', ' ')
+            try:
+                match = re.match(r"(?:{})\s*([\s\S]*)".format("|".join(map(re.escape, [p.replace('：', ':') for p in trigger_phrases]))), safe_content)
+            except Exception as e2:
+                print(f"二次正则匹配异常: {e2}，使用原始每日天文内容")
+                match = re.search(
+                    r"(?:每日天文：|小天，每日天文做好啦：|小天，每日天文做好了：)([\s\S]*)",
+                    content
+                )
+
+
         if not match:
             return None, "未找到正确格式的内容"
         
@@ -320,8 +339,9 @@ class AstronomyPoster:
         waiting_status, remaining, auto_poster_path, auto_message = self.check_waiting_status()
         if auto_poster_path and self.waiting_user_id:
             # 超时自动生成了海报
-            self.last_astronomy_post = (auto_poster_path, DAILY_ASTRONOMY_MESSAGE)
-            
+            astronomy_message = f"今天的{DAILY_ASTRONOMY_MESSAGE}来啦"
+            self.last_astronomy_post = (auto_poster_path, astronomy_message)
+
             # 发送给等待的用户
             user_id = self.waiting_user_id
             group_id = self.waiting_group_id
@@ -540,8 +560,8 @@ class AstronomyPoster:
         
         # 添加标题，放大字号
         title_font_large = ImageFont.truetype(title_font_path, 110) if 'title_font_path' in locals() else title_font
-        draw.text((600, 120), "每日天文", fill=(255, 255, 255, 255), font=title_font_large, anchor="mm")
-        
+        draw.text((600, 120), DAILY_ASTRONOMY_MESSAGE, fill=(255, 255, 255, 255), font=title_font_large, anchor="mm")
+
         # 在右上角添加正方形的日期框（纵向排列）- 优化版本
         date_box_size = 180  # 进一步放大正方形边长
         date_box_x = img.width - date_box_size - 135  # 进一步向左移动，距右边界100px
