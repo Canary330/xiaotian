@@ -75,7 +75,7 @@ class AstronomyPoster:
                     self.message_sender.send_message_to_groups(message, image_path)
 
                     # 延时10秒后发送AI点评
-                    if hasattr(self, 'astronomy') and self.astronomy and self.latest_ai_comment:
+                    if self.latest_ai_comment:
                         import threading
                         def send_ai_comment():
                             time.sleep(10)  # 延时10秒
@@ -252,7 +252,7 @@ class AstronomyPoster:
             self.user_images = []
             
             # 生成AI点评
-            comment_prompt = f"请根据以下天文内容，生成一段100字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
+            comment_prompt = f"请根据以下天文内容，生成一段50字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
             try:
                 ai_comment = self.ai_client.get_response(comment_prompt, user_id="system")
                 self.latest_ai_comment = ai_comment  # 保存AI点评供定时任务使用
@@ -296,7 +296,7 @@ class AstronomyPoster:
                     self.user_images = []
                     
                     # 生成AI点评
-                    comment_prompt = f"请根据以下天文内容，生成一段100字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
+                    comment_prompt = f"请根据以下天文内容，生成一段50字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
                     try:
                         ai_comment = self.ai_client.get_response(comment_prompt, user_id="system")
                         self.latest_ai_comment = ai_comment  # 保存AI点评供定时任务使用
@@ -316,7 +316,7 @@ class AstronomyPoster:
                 self.user_images = []
                 
                 # 生成AI点评
-                comment_prompt = f"请根据以下天文内容，生成一段100字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
+                comment_prompt = f"请根据以下天文内容，生成一段50字以内的点评，风格可以是有趣、富有启发性或引人深思的：\n\n{astronomy_text}"
                 try:
                     ai_comment = self.ai_client.get_response(comment_prompt, user_id="system")
                     self.latest_ai_comment = ai_comment  # 保存AI点评供定时任务使用
@@ -333,8 +333,6 @@ class AstronomyPoster:
     
     def _check_astronomy_timeout(self):
         """检查天文海报超时状态并自动发送"""
-        if not hasattr(self, 'astronomy') or not self.astronomy:
-            return
         
         waiting_status, remaining, auto_poster_path, auto_message = self.check_waiting_status()
         if auto_poster_path and self.waiting_user_id:

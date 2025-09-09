@@ -285,7 +285,7 @@ class XiaotianScheduler:
                 if self.astronomy.waiting_for_images:
                     last_time = time.time()
                     while self.astronomy.waiting_for_images and (time.time() - last_time < 70):
-                        self._check_astronomy_timeout()
+                        self.astronomy._check_astronomy_timeout()
                         time.sleep(5)
                 # 检查是否有活跃的案件推理
                 if hasattr(self, 'criminal_case') and self.criminal_case and self.criminal_case.active_cases:
