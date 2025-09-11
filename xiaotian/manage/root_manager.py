@@ -1053,11 +1053,14 @@ class RootManager:
     def _delete_question_from_json(self, keyword: str) -> str:
         """从JSON文件中删除题目"""
         try:
-            # 获取JSON文件路径
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            parent_dir = os.path.dirname(current_dir)
-            grandparent_dir = os.path.dirname(parent_dir)
-            json_path = os.path.join(grandparent_dir, "data", "astronomy_quiz.json")
+            # root_manager.py -> xiaotian/manage/root_manager.py
+            # 我们需要到达 xiaotian1/xiaotian/data/ 目录
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # xiaotian/xiaotian/manage
+            xiaotian_inner_dir = os.path.dirname(current_dir)  # xiaotian/xiaotian
+            xiaotian_outer_dir = os.path.dirname(xiaotian_inner_dir)  # xiaotian
+            project_root = os.path.dirname(xiaotian_outer_dir)  # xiaotian1
+            json_path = os.path.join(project_root, "data", "astronomy_quiz.json")
+            
             
             if not os.path.exists(json_path):
                 return "题库文件不存在"

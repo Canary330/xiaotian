@@ -279,56 +279,60 @@ class XiaotianScheduler:
         # 在后台线程中运行调度器
         def run_scheduler():
             while self.is_running:
-                self.scheduler.run_pending()
-                
-                # 每5秒检查一次天文海报超时状态
-                if self.astronomy.waiting_for_images:
-                    last_time = time.time()
-                    while self.astronomy.waiting_for_images and (time.time() - last_time < 70):
-                        self.astronomy._check_astronomy_timeout()
-                        time.sleep(5)
-                # 检查是否有活跃的案件推理
-                if hasattr(self, 'criminal_case') and self.criminal_case and self.criminal_case.active_cases:
-                    # 检查案件超时
-                    self._check_case_timeout()
-                # 检查是否有活跃的天文竞答
-                if hasattr(self, 'astronomy_quiz') and self.astronomy_quiz and self.astronomy_quiz.active_quizzes:
-                    # 有活跃竞答，进入频繁检查循环
-                    for _ in range(200):  # 200次循环，每次3秒，共600秒
-                        time.sleep(3)  # 每3秒检查一次
-                        
-                        # 检查是否还有活跃竞答
-                        if not self.astronomy_quiz.active_quizzes:
-                            break
-                            
-                        # 检查每个活跃竞答的超时
-                        for group_id, quiz in list(self.astronomy_quiz.active_quizzes.items()):
-                            if quiz and not quiz.get("participants"):  # 只在没人回答时检查超时
-                                current_time = datetime.now()
-                                if "start_time" in quiz and (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
-                                    # 检查群组是否在目标群组列表中
-                                    target_groups = self.root_manager.get_target_groups()
-                                    if group_id not in target_groups:
-                                        print(f"警告：尝试向非目标群组 {group_id} 发送竞答超时消息，已阻止。")
-                                        continue
-                                    
-                                    # 如果当前题目已超时，处理超时
-                                    result_msg1, result_msg2 = self.astronomy_quiz.handle_question_timeout(group_id)
-                                    if self.root_manager.settings.get('qq_send_callback'):
-                                        try:
-                                            # 先发送超时通知
-                                            if result_msg1:
-                                                self.root_manager.settings['qq_send_callback']('group', group_id, result_msg1, None)
+                try:
+                    self.scheduler.run_pending()
+
+                    # 每5秒检查一次天文海报超时状态
+                    if self.astronomy.waiting_for_images:
+                        last_time = time.time()
+                        while self.astronomy.waiting_for_images and (time.time() - last_time < 70):
+                            self.astronomy._check_astronomy_timeout()
+                            time.sleep(5)
+                    # 检查是否有活跃的案件推理
+                    if hasattr(self, 'criminal_case') and self.criminal_case and self.criminal_case.active_cases:
+                        # 检查案件超时
+                        self._check_case_timeout()
+                    # 检查是否有活跃的天文竞答
+                    if hasattr(self, 'astronomy_quiz') and self.astronomy_quiz and self.astronomy_quiz.active_quizzes:
+                        # 有活跃竞答，进入频繁检查循环
+                        for _ in range(200):  # 200次循环，每次3秒，共600秒
+                            time.sleep(3)  # 每3秒检查一次
+
+                            # 检查是否还有活跃竞答
+                            if not self.astronomy_quiz.active_quizzes:
+                                break
+                                
+                            # 检查每个活跃竞答的超时
+                            for group_id, quiz in list(self.astronomy_quiz.active_quizzes.items()):
+                                if quiz and not quiz.get("participants"):  # 只在没人回答时检查超时
+                                    current_time = datetime.now()
+                                    if "start_time" in quiz and (current_time - quiz["start_time"]).total_seconds() > quiz["duration"]:
+                                        # 检查群组是否在目标群组列表中
+                                        target_groups = self.root_manager.get_target_groups()
+                                        if group_id not in target_groups:
+                                            print(f"警告：尝试向非目标群组 {group_id} 发送竞答超时消息，已阻止。")
+                                            continue
                                             
-                                            # 延迟5秒后发送下一题或结果
-                                            if result_msg2:
-                                                time.sleep(5)
-                                                self.root_manager.settings['qq_send_callback']('group', group_id, result_msg2, None)
-                                        except Exception as e:
-                                            print(f"发送题目超时消息失败: {e}")
-                else:
-                    # 没有活跃竞答，直接睡眠60秒
-                    time.sleep(60)
+                                        # 如果当前题目已超时，处理超时
+                                        result_msg1, result_msg2 = self.astronomy_quiz.handle_question_timeout(group_id)
+                                        if self.root_manager.settings.get('qq_send_callback'):
+                                            try:
+                                                # 先发送超时通知
+                                                if result_msg1:
+                                                    self.root_manager.settings['qq_send_callback']('group', group_id, result_msg1, None)
+
+                                                # 延迟5秒后发送下一题或结果
+                                                if result_msg2:
+                                                    time.sleep(5)
+                                                    self.root_manager.settings['qq_send_callback']('group', group_id, result_msg2, None)
+                                            except Exception as e:
+                                                print(f"发送题目超时消息失败: {e}")
+                    else:
+                        # 没有活跃竞答，直接睡眠60秒
+                        time.sleep(60)
+                except Exception as e:
+                    print(f"调度器主循环异常: {e}")
+                    pass
 
         scheduler_thread = Thread(target=run_scheduler, daemon=True)
         scheduler_thread.start()
@@ -414,6 +418,12 @@ class XiaotianScheduler:
             elif response:
                 return f'{{"data": [{{"wait_time": 3, "content": "{response}"}}], "like": 0}}'
         
+        
+        # 检查用户特殊提示词(只有不在案件推理模式时才检查)
+        special_command_result = self._check_special_user_commands(user_id, message, group_id)
+        if special_command_result:
+            return special_command_result
+        
         # 只有不在特殊模式时才检查唤醒状态超时
         current_time = time.time()
         if not in_special_mode and self.wait_for_wakeup and (current_time - self.wakeup_time - self.ai_response_time) > self.waiting_time:
@@ -421,11 +431,6 @@ class XiaotianScheduler:
             self.ai_response_time = 0  # 重置AI回复时间累计
             print(f"唤醒状态超时，已自动关闭")
         
-        # 检查用户特殊提示词(只有不在案件推理模式时才检查)
-        special_command_result = self._check_special_user_commands(user_id, message, group_id)
-        if special_command_result:
-            return special_command_result
-            
         # 快速路径：检查是否是唤醒状态中的同一用户
         is_wakeup_continue = (self.wait_for_wakeup and 
                              self.last_user_id == user_id and 

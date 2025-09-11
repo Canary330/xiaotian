@@ -15,7 +15,7 @@
     {
         "question": "人类首次载人登月任务阿波罗11号着陆的月球区域名称是？",
         "type": "fill_blank",
-        "answer": "静海（Sea of Tranquility）",
+        "answer": "静海",
         "difficulty": "normal",
         "reference": "NASA Apollo 11 Mission Report, 1969"
     },
@@ -48,7 +48,7 @@
     {
         "question": "夜空最亮的恒星是？",
         "type": "fill_blank",
-        "answer": "天狼星（Sirius）",
+        "answer": "天狼星",
         "difficulty": "easy",
         "reference": "SIMBAD Astronomical Database"
     },
@@ -68,7 +68,7 @@
     {
         "question": "太阳系位于银河系的哪一个旋臂上？",
         "type": "fill_blank",
-        "answer": "猎户-天鹅臂（Orion–Cygnus Arm）",
+        "answer": "猎户-天鹅臂",
         "difficulty": "normal",
         "reference": "NASA JPL, 2022 Galactic Structure Map"
     },
@@ -88,7 +88,7 @@
     {
         "question": "黑洞的边界称为？",
         "type": "fill_blank",
-        "answer": "事件视界（Event Horizon）",
+        "answer": "事件视界",
         "difficulty": "easy",
         "reference": "Event Horizon Telescope Collaboration, 2019"
     },
@@ -148,7 +148,7 @@
     {
         "question": "月球正面最大的撞击盆地是？",
         "type": "fill_blank",
-        "answer": "南极-艾特肯盆地（South Pole–Aitken Basin）",
+        "answer": "南极-艾特肯盆地",
         "difficulty": "difficult",
         "reference": "NASA GRAIL Mission, 2013"
     },
@@ -168,7 +168,7 @@
     {
         "question": "金星自转方向与大多数行星相反，称为？",
         "type": "fill_blank",
-        "answer": "逆向自转（retrograde rotation）",
+        "answer": "逆向自转",
         "difficulty": "normal",
         "reference": "NASA Venus Fact Sheet, 2024"
     },
@@ -188,7 +188,7 @@
     {
         "question": "地球到太阳的平均距离被定义为？",
         "type": "fill_blank",
-        "answer": "1天文单位（AU）",
+        "answer": "1天文单位",
         "difficulty": "easy",
         "reference": "IAU 2012 Resolution B2"
     },
@@ -314,7 +314,7 @@
     {
         "question": "太阳系中唯一已知拥有活跃火山体的卫星是？",
         "type": "fill_blank",
-        "answer": "木卫一（Io）",
+        "answer": "木卫一",
         "difficulty": "normal",
         "reference": "NASA Galileo Mission, 2001"
     },
@@ -334,7 +334,7 @@
     {
         "question": "彗星的核心被称为？",
         "type": "fill_blank",
-        "answer": "彗核（nucleus）",
+        "answer": "彗核",
         "difficulty": "easy",
         "reference": "ESA Rosetta Mission, 2016"
     },
@@ -427,7 +427,7 @@
     {
         "question": "太阳系中已知最高的山是？",
         "type": "fill_blank",
-        "answer": "奥林匹斯山（Olympus Mons）",
+        "answer": "奥林匹斯山",
         "difficulty": "normal",
         "reference": "NASA Mars Reconnaissance Orbiter, 2018"
     },
@@ -467,7 +467,7 @@
     {
         "question": "太阳表面可见光层称为？",
         "type": "fill_blank",
-        "answer": "光球层（photosphere）",
+        "answer": "光球层",
         "difficulty": "easy",
         "reference": "NASA Sun Fact Sheet"
     },
@@ -507,7 +507,7 @@
     {
         "question": "地球大气中含量最多的气体是？",
         "type": "fill_blank",
-        "answer": "氮气（N₂）",
+        "answer": "氮气",
         "difficulty": "easy",
         "reference": "NASA Earth Fact Sheet"
     },
@@ -625,7 +625,7 @@
         "reference": "NASA Juno Mission, 2021"
     },
     {
-        "question": "金星上的一天（太阳日）长度约为多少地球日？",
+        "question": "金星上的一天（太阳日）长度约为多少地球日（回答示例：111.11天）？",
         "type": "fill_blank",
         "answer": "116.75天",
         "difficulty": "difficult",
@@ -667,7 +667,7 @@
     {
         "question": "地球磁场产生的主要机制被称为？",
         "type": "fill_blank",
-        "answer": "地核发电机机制（Geodynamo）",
+        "answer": "地核发电机机制",
         "difficulty": "normal",
         "reference": "IAGA Working Group V-MOD"
     },
@@ -707,7 +707,7 @@
     {
         "question": "月球表面最暗的月海称为？",
         "type": "fill_blank",
-        "answer": "雨海（Mare Imbrium）",
+        "answer": "雨海",
         "difficulty": "normal",
         "reference": "NASA Lunar Reconnaissance Orbiter"
     },
@@ -880,7 +880,7 @@
     {
         "question": "地球大气层中臭氧层主要集中在哪一层？",
         "type": "fill_blank",
-        "answer": "平流层（stratosphere）",
+        "answer": "平流层",
         "difficulty": "easy",
         "reference": "NASA Earth Observatory"
     },
@@ -900,7 +900,7 @@
     {
         "question": "太阳系中哪颗行星的卫星拥有最活跃喷泉？",
         "type": "fill_blank",
-        "answer": "土卫二（Enceladus）",
+        "answer": "土卫二",
         "difficulty": "normal",
         "reference": "NASA Cassini Mission, 2017"
     },
@@ -951,7 +951,7 @@
     {
         "question": "太阳系中哪颗行星的卫星拥有最厚的大气层？",
         "type": "fill_blank",
-        "answer": "土卫六（泰坦）",
+        "answer": "土卫六",
         "difficulty": "normal",
         "reference": "NASA Cassini-Huygens, 2017"
     },
@@ -1091,7 +1091,7 @@
     {
         "question": "太阳系中哪颗行星的卫星拥有最多的已知撞击坑？",
         "type": "fill_blank",
-        "answer": "木卫四（Callisto）",
+        "answer": "木卫四",
         "difficulty": "normal",
         "reference": "NASA Galileo Mission, 2001"
     },
@@ -1176,7 +1176,7 @@
     {
         "question": "火星的卫星火卫一表面最大的撞击坑名为？",
         "type": "fill_blank",
-        "answer": "斯蒂克尼（Stickney）",
+        "answer": "斯蒂克尼",
         "difficulty": "normal",
         "reference": "NASA Mars Reconnaissance Orbiter"
     },
@@ -1424,7 +1424,7 @@
     {
         "question": "地球的平均轨道周期被称为？",
         "type": "fill_blank",
-        "answer": "热带年（365.2422天）",
+        "answer": "热带年",
         "difficulty": "easy",
         "reference": "IAU 2006 Resolution B1"
     },

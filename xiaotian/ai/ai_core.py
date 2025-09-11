@@ -129,7 +129,7 @@ class XiaotianAI:
             
             print(f"✨ 成功为用户 {memory_key} 生成专属自定义性格")
             
-            return generated_personality
+            return f"成功"
             
         except Exception as e:
             print(f"❌ 生成自定义性格失败: {e}")
@@ -442,10 +442,8 @@ class XiaotianAI:
         target_like = target_status['total_like']
         
         # 如果没有指定对冲金额，返回用户当前状态和可选择的范围
-        from xiaotian.manage.config import XIAOTIAN_NAME
-        mascot_name = XIAOTIAN_NAME
         if transfer_amount is None:
-            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：{mascot_name}，与[@用户]对冲[金额]"
+            return f"💰 你的like值：{source_like:.2f}\\n🎯 目标用户like值：{target_like:.2f}\\n💫 可对冲范围：0.1 - {source_like:.2f}\\n📝 请使用：小天，与[@用户]对冲[金额]"
         
         # 验证对冲金额
         if transfer_amount <= 0:
@@ -456,19 +454,12 @@ class XiaotianAI:
         # 计算实际效果：被动方扣除8折金额（这里应该是减少，不是增加）
         actual_effect = transfer_amount * 0.8
         fee = transfer_amount - actual_effect
-        
+        # 检查目标用户是否已经低于-150
+        if target_like <= -150:
+            return f"❌ 目标用户like值已达到下限 ({target_like:.2f})，无法继续对冲"
+            
         # 检查被动方是否会低于-150
         new_target_like = target_like - actual_effect  # 对冲是减少目标用户的like值
-        if new_target_like < -150:
-            # 调整实际效果，使目标用户不低于-150
-            max_effect = target_like + 150  # 最多只能减少到-150
-            actual_effect = max_effect
-            transfer_amount = actual_effect / 0.8
-            fee = transfer_amount - actual_effect
-            new_target_like = -150
-            
-            if transfer_amount > source_like:
-                return f"❌ 目标用户like值接近下限，你的like值不足以进行有效对冲"
         
         # 执行对冲操作
         source_status['total_like'] = round(source_like - transfer_amount, 2)
