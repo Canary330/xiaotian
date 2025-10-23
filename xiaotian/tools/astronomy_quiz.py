@@ -245,7 +245,8 @@ class AstronomyQuiz:
             "round": 1,  # 当前是第几轮竞答
             "total_rounds": question_count,  # 总共几轮竞答
             "setting_count": False,  # 不再需要设置题目数量
-            "scores": {}  # 用户得分 {user_id: 分数}
+            "scores": {},  # 用户得分 {user_id: 分数}
+            "question_answered": False  # 当前题目是否已被回答
         }
         
         # 保存竞答状态
@@ -256,7 +257,7 @@ class AstronomyQuiz:
                          f"📚 本次题目数量：{question_count}题\n"
                          f"⏱️ 每题答题时间：{quiz_state['duration']}秒\n"
                          f"💰 规则：抢答制，且答对题目用时越短奖励越丰厚\n"
-                         f" 提示：输入'结算'可提前结束本次竞答\n\n")
+                         f"💡 提示：输入'过'可跳过当前题目，输入'结算'可提前结束本次竞答\n\n")
         
         # 直接开始第一道题
         first_question_message = self.next_question(group_id)
@@ -267,24 +268,25 @@ class AstronomyQuiz:
         """进入下一题"""
         if group_id not in self.active_quizzes:
             return ""
-            
+
         quiz = self.active_quizzes[group_id]
-        
+
         # 增加当前题目索引
         quiz["current_question"] += 1
-        
+
         # 检查是否已完成所有题目 - 修复题目数量
         # 使用等号而不是大于号，确保只问用户要求的题目数量
         if quiz["current_question"] > quiz["total_rounds"] or quiz["current_question"] > len(quiz["questions"]):
             # 竞答完成，返回结果
             return self.finish_quiz(group_id)
-            
+
         # 获取当前题目
         current_index = quiz["current_question"] - 1
         question_data = quiz["questions"][current_index]
-        
-        # 重置当前题目的参与者
+
+        # 重置当前题目的参与者和答题状态
         quiz["participants"] = {}
+        quiz["question_answered"] = False  # 标记当前题目未被回答
         
         # 构建题目消息
         # 获取题目难度
@@ -514,43 +516,54 @@ class AstronomyQuiz:
     def process_answer(self, user_id: str, message: str, group_id: str) -> Tuple[str, str]:
         """
         处理用户的竞答回答
-        
+
         Args:
             user_id: 用户ID
             message: 用户消息
             group_id: 群组ID
-            
+
         Returns:
             Tuple[str, str]: 回答反馈和下一题/结果消息，如果不是当前群的竞答或不是有效回答则返回空字符串
         """
         # 检查该群是否有正在进行的竞答
         if group_id not in self.active_quizzes:
             return "", ""
-            
+
         # 检查竞答是否已超时
         current_time = datetime.now()
         quiz = self.active_quizzes[group_id]
-        
+
+        # 检查当前题目是否已被回答（防止在进入下一题前的答案被误判）
+        if quiz.get("question_answered", False):
+            return "", ""
+
         # 检查当前题目是否已有人答对（抢答模式下，一旦有人答对就不再接受答案）
         has_correct_answer = any(p.get("correct", False) for p in quiz["participants"].values())
         if has_correct_answer:
             return "", ""
-            
+
         # 检查用户是否已经回答过当前题目
         if user_id in quiz["participants"]:
             return "", ""  # 不重复提示，避免刷屏
-            
+
+        # 检查命令是否是跳过指令
+        if message.strip() == "过":
+            # 直接显示答案并进入下一题
+            quiz["question_answered"] = True  # 标记题目已处理
+            return self.handle_question_timeout(group_id)
+
         # 检查命令是否是结算指令
         if message.strip() == "结算" or message.strip().lower() == "结束":
             # 检查是否回答了至少一题
             if quiz.get("current_question", 0) > 1:  # 已经回答了至少一题
                 return self.finish_quiz(group_id, user_id)
             else:
-                return f"⚠️ 至少需要回答一题才能结算！"
-            
+                return f"⚠️ 至少需要回答一题才能结算！", ""
+
 
         if (current_time - quiz["start_time"]).total_seconds() - 7 > quiz["duration"]:
             # 竞答已结束，触发结束流程并进入下一题或结束
+            quiz["question_answered"] = True  # 标记题目已处理
             return self.handle_question_timeout(group_id)
             
         
@@ -667,7 +680,10 @@ class AstronomyQuiz:
                     self.ai.update_user_like(user_memory_key, like_change)
             except Exception as e:
                 print(f"❌ 更新好感度时出错: {e}")
-                
+
+        # 标记当前题目已被回答（防止在进入下一题前的其他答案被误判）
+        quiz["question_answered"] = True
+
         # 无论对错，都立即进入下一题或结束竞答
         next_question = self.next_question(group_id)
         
